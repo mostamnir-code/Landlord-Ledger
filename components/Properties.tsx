@@ -42,12 +42,12 @@ const PropertyCard: React.FC<{ property: Property; onDelete: () => void; onSelec
     <div className="mt-4 space-y-2 text-sm text-slate-600 flex-grow">
       <p><span className="font-semibold">Tenant:</span> {property.tenant}</p>
       <p><span className="font-semibold">Rent:</span> ${property.rent.toLocaleString()}/month</p>
-      <p><span className="font-semibold">Lease End:</span> {new Date(property.leaseEnd).toLocaleDateString()}</p>
+      <p><span className="font-semibold">Lease End:</span> {new Date(property.lease_end).toLocaleDateString()}</p>
     </div>
   </div>
 );
 
-const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id'>) => void; onClose: () => void; }> = ({ onAdd, onClose }) => {
+const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id' | 'notes'>) => void; onClose: () => void; }> = ({ onAdd, onClose }) => {
   const [address, setAddress] = useState('');
   const [tenant, setTenant] = useState('');
   const [rent, setRent] = useState('');
@@ -56,7 +56,7 @@ const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id'>) => voi
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!address || !tenant || !rent || !leaseEnd) return;
-    onAdd({ address, tenant, rent: parseFloat(rent), leaseEnd });
+    onAdd({ address, tenant, rent: parseFloat(rent), lease_end: leaseEnd });
     onClose();
   };
 
@@ -88,7 +88,7 @@ const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id'>) => voi
 
 interface PropertiesProps {
   properties: Property[];
-  addProperty: (property: Omit<Property, 'id'>) => void;
+  addProperty: (property: Omit<Property, 'id' | 'notes'>) => void;
   deleteProperty: (propertyId: string) => void;
   onSelectProperty: (propertyId: string) => void;
 }

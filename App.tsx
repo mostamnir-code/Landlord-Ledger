@@ -89,7 +89,7 @@ const App: React.FC = () => {
 
   const deleteProperty = async (propertyId: string) => {
     // Delete associated transactions first
-    const { error: transError } = await supabase.from('transactions').delete().eq('propertyId', propertyId);
+    const { error: transError } = await supabase.from('transactions').delete().eq('property_id', propertyId);
     if (transError) {
         console.error('Error deleting transactions for property:', transError.message);
         return;
@@ -100,7 +100,7 @@ const App: React.FC = () => {
         console.error('Error deleting property:', propError.message);
     } else {
         setProperties(prev => prev.filter(p => p.id !== propertyId));
-        setTransactions(prev => prev.filter(t => t.propertyId !== propertyId));
+        setTransactions(prev => prev.filter(t => t.property_id !== propertyId));
     }
   };
 
@@ -173,7 +173,7 @@ const App: React.FC = () => {
           handleBackToProperties();
           return null;
         }
-        const propertyTransactions = transactions.filter(t => t.propertyId === selectedPropertyId);
+        const propertyTransactions = transactions.filter(t => t.property_id === selectedPropertyId);
         return <PropertyDetail property={property} transactions={propertyTransactions} onBack={handleBackToProperties} onUpdateNotes={updatePropertyNotes} />;
       }
       default:

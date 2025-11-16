@@ -56,7 +56,7 @@ const AddTransactionForm: React.FC<{
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!propertyId || !description || !amount || !date || !category) return;
-    onAdd({ propertyId, type, category, description, amount: parseFloat(amount), date });
+    onAdd({ property_id: propertyId, type, category, description, amount: parseFloat(amount), date });
     onClose();
   };
 
@@ -133,8 +133,8 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
 
         switch (sortConfig.key) {
             case 'property':
-                aValue = propertyMap.get(a.propertyId) || '';
-                bValue = propertyMap.get(b.propertyId) || '';
+                aValue = propertyMap.get(a.property_id) || '';
+                bValue = propertyMap.get(b.property_id) || '';
                 break;
             case 'date':
                 aValue = new Date(a.date).getTime();
@@ -250,7 +250,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
                     {sortedTransactions.map(t => (
                     <tr key={t.id} className="hover:bg-slate-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{propertyMap.get(t.propertyId) || 'N/A'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{propertyMap.get(t.property_id) || 'N/A'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{t.description}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">

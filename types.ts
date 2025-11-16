@@ -11,13 +11,13 @@ export interface Property {
   address: string;
   tenant: string;
   rent: number;
-  leaseEnd: string;
+  lease_end: string;
   notes?: string;
 }
 
 export interface Transaction {
   id: string;
-  propertyId: string;
+  property_id: string;
   type: TransactionType;
   description: string;
   amount: number;
