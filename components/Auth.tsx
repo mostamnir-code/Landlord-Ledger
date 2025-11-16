@@ -22,6 +22,12 @@ export const Auth: React.FC = () => {
         setError(null);
         setMessage(null);
 
+        if (!supabase) {
+            setError("Application is not configured to connect to the database.");
+            setLoading(false);
+            return;
+        }
+
         try {
             if (isLoginView) {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });

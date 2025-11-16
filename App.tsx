@@ -14,6 +14,18 @@ import type { User } from '@supabase/supabase-js';
 
 
 const App: React.FC = () => {
+  if (!supabase) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 p-4">
+        <div className="p-8 text-center font-sans bg-red-50 text-red-800 border border-red-200 rounded-lg shadow-md max-w-lg mx-auto">
+          <h1 className="text-2xl font-bold mb-4">Configuration Error</h1>
+          <p>The application is missing the required Supabase credentials (URL and Key).</p>
+          <p className="mt-2">These are typically set as environment variables and are necessary for the application to connect to its database.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [activeView, setActiveView] = useState('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
