@@ -114,11 +114,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' }>({ key: 'date', direction: 'descending' });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.address])), [properties]);
 
   const sortedTransactions = useMemo(() => {
-    const sortableItems = [...transactions];
+    const filteredItems = transactions.filter(t =>
+      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const sortableItems = [...filteredItems];
     if (!sortConfig) return sortableItems;
 
     sortableItems.sort((a, b) => {
@@ -159,7 +165,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
     });
 
     return sortableItems;
-}, [transactions, sortConfig, propertyMap]);
+}, [transactions, sortConfig, propertyMap, searchTerm]);
 
   const requestSort = (key: SortKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -176,78 +182,99 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-slate-900">Transactions</h1>
-        <button onClick={() => setIsAddModalOpen(true)} className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg shadow-md hover:bg-primary-700 transition-colors" disabled={properties.length === 0}>
-          <PlusIcon className="w-5 h-5" />
-          <span>Add Transaction</span>
-        </button>
+        <div className="flex items-center space-x-4">
+            <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input
+                    type="text"
+                    placeholder="Search description or category..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full sm:w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+            </div>
+            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg shadow-md hover:bg-primary-700 transition-colors" disabled={properties.length === 0}>
+              <PlusIcon className="w-5 h-5" />
+              <span>Add Transaction</span>
+            </button>
+        </div>
       </div>
 
       {transactions.length > 0 ? (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort('date')} className="inline-flex items-center">
-                      Date
-                      {sortConfig.key === 'date' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort('property')} className="inline-flex items-center">
-                      Property
-                      {sortConfig.key === 'property' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort('description')} className="inline-flex items-center">
-                      Description
-                      {sortConfig.key === 'description' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort('category')} className="inline-flex items-center">
-                      Category
-                      {sortConfig.key === 'category' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    <button onClick={() => requestSort('amount')} className="inline-flex items-center">
-                      Amount
-                      {sortConfig.key === 'amount' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
-                    </button>
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {sortedTransactions.map(t => (
-                  <tr key={t.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{propertyMap.get(t.propertyId) || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{t.description}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">
-                          {t.category}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
-                      {t.type === TransactionType.INCOME ? '+' : '-'}{formatCurrency(t.amount)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button onClick={() => setTransactionToDelete(t)} className="text-slate-400 hover:text-red-600" aria-label={`Delete transaction ${t.description}`}>
-                          <TrashIcon className="w-5 h-5"/>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {sortedTransactions.length > 0 ? (
+                <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                    <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <button onClick={() => requestSort('date')} className="inline-flex items-center">
+                        Date
+                        {sortConfig.key === 'date' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
+                        </button>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <button onClick={() => requestSort('property')} className="inline-flex items-center">
+                        Property
+                        {sortConfig.key === 'property' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
+                        </button>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <button onClick={() => requestSort('description')} className="inline-flex items-center">
+                        Description
+                        {sortConfig.key === 'description' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
+                        </button>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <button onClick={() => requestSort('category')} className="inline-flex items-center">
+                        Category
+                        {sortConfig.key === 'category' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
+                        </button>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <button onClick={() => requestSort('amount')} className="inline-flex items-center">
+                        Amount
+                        {sortConfig.key === 'amount' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon /> : <SortDescendingIcon />)}
+                        </button>
+                    </th>
+                    <th scope="col" className="relative px-6 py-3">
+                        <span className="sr-only">Actions</span>
+                    </th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                    {sortedTransactions.map(t => (
+                    <tr key={t.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{propertyMap.get(t.propertyId) || 'N/A'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{t.description}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">
+                            {t.category}
+                        </span>
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
+                        {t.type === TransactionType.INCOME ? '+' : '-'}{formatCurrency(t.amount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onClick={() => setTransactionToDelete(t)} className="text-slate-400 hover:text-red-600" aria-label={`Delete transaction ${t.description}`}>
+                            <TrashIcon className="w-5 h-5"/>
+                        </button>
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            ) : (
+                <div className="text-center p-16">
+                    <h3 className="text-lg font-medium text-slate-800">No Results Found</h3>
+                    <p className="mt-1 text-sm text-slate-500">Your search for "{searchTerm}" did not match any transactions.</p>
+                </div>
+            )}
           </div>
         </div>
       ) : (

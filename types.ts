@@ -1,4 +1,3 @@
-
 export enum TransactionType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',
@@ -13,6 +12,7 @@ export interface Property {
   tenant: string;
   rent: number;
   leaseEnd: string;
+  notes?: string;
 }
 
 export interface Transaction {

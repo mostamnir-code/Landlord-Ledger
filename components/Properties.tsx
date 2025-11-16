@@ -24,11 +24,18 @@ const EmptyPropertiesIllustration: React.FC<React.SVGProps<SVGSVGElement>> = (pr
     </svg>
 );
 
-const PropertyCard: React.FC<{ property: Property; onDelete: () => void; }> = ({ property, onDelete }) => (
-  <div className="bg-white p-6 rounded-lg shadow-md border border-slate-200 hover:shadow-lg transition-shadow flex flex-col">
+const PropertyCard: React.FC<{ property: Property; onDelete: () => void; onSelect: () => void; }> = ({ property, onDelete, onSelect }) => (
+  <div onClick={onSelect} className="bg-white p-6 rounded-lg shadow-md border border-slate-200 hover:shadow-lg transition-shadow flex flex-col cursor-pointer">
     <div className="flex justify-between items-start">
         <h3 className="text-lg font-bold text-primary-700">{property.address}</h3>
-        <button onClick={onDelete} className="text-slate-400 hover:text-red-600 p-1 rounded-full transition-colors" aria-label={`Delete property ${property.address}`}>
+        <button
+            onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+            }}
+            className="text-slate-400 hover:text-red-600 p-1 rounded-full transition-colors"
+            aria-label={`Delete property ${property.address}`}
+        >
             <TrashIcon className="w-5 h-5" />
         </button>
     </div>
@@ -83,9 +90,10 @@ interface PropertiesProps {
   properties: Property[];
   addProperty: (property: Omit<Property, 'id'>) => void;
   deleteProperty: (propertyId: string) => void;
+  onSelectProperty: (propertyId: string) => void;
 }
 
-export const Properties: React.FC<PropertiesProps> = ({ properties, addProperty, deleteProperty }) => {
+export const Properties: React.FC<PropertiesProps> = ({ properties, addProperty, deleteProperty, onSelectProperty }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
 
@@ -102,7 +110,12 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, addProperty,
       {properties.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {properties.map(prop => (
-            <PropertyCard key={prop.id} property={prop} onDelete={() => setPropertyToDelete(prop)} />
+            <PropertyCard
+              key={prop.id}
+              property={prop}
+              onDelete={() => setPropertyToDelete(prop)}
+              onSelect={() => onSelectProperty(prop.id)}
+            />
           ))}
         </div>
       ) : (
