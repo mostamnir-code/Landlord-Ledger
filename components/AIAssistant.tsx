@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import type { Property, Transaction } from '../types';
+import type { Property, Transaction, Tenant } from '../types';
 import { getFinancialInsight } from '../services/geminiService';
 
 interface Message {
@@ -25,9 +24,10 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 interface AIAssistantProps {
   properties: Property[];
   transactions: Transaction[];
+  tenants: Tenant[];
 }
 
-export const AIAssistant: React.FC<AIAssistantProps> = ({ properties, transactions }) => {
+export const AIAssistant: React.FC<AIAssistantProps> = ({ properties, transactions, tenants }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -53,7 +53,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ properties, transactio
     setInput('');
     setIsLoading(true);
 
-    const aiResponse = await getFinancialInsight(input, properties, transactions);
+    const aiResponse = await getFinancialInsight(input, properties, transactions, tenants);
     
     const aiMessage: Message = { sender: 'ai', text: aiResponse };
     setMessages(prev => [...prev, aiMessage]);

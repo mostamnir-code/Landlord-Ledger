@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -5,9 +6,11 @@ import { Dashboard } from './components/Dashboard';
 import { Properties } from './components/Properties';
 import { TransactionsView } from './components/TransactionsView';
 import { PropertyDetail } from './components/PropertyDetail';
+import { Tenants } from './components/Tenants';
+import { TenantDetail } from './components/TenantDetail';
 import { AIAssistant } from './components/AIAssistant';
 import { Auth } from './components/Auth';
-import type { Property, Transaction } from './types';
+import type { Property, Transaction, Tenant } from './types';
 import { TransactionType } from './types';
 import { supabase } from './services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
@@ -29,10 +32,12 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState('dashboard');
   const [user, setUser] = useState<User | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
 
   useEffect(() => {
     const getSession = async () => {
@@ -67,6 +72,15 @@ const App: React.FC = () => {
 
         if (transactionsError) console.error('Error fetching transactions:', transactionsError.message);
         else setTransactions(transactionsData || []);
+
+        const { data: tenantsData, error: tenantsError } = await supabase
+          .from('tenants')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (tenantsError) console.error('Error fetching tenants:', tenantsError.message);
+        else setTenants(tenantsData || []);
+
       }
     };
 
@@ -104,6 +118,21 @@ const App: React.FC = () => {
     }
   };
 
+  const updateProperty = async (propertyId: string, updatedInfo: Partial<Omit<Property, 'id' | 'notes' | 'address'>>) => {
+    const { data, error } = await supabase
+        .from('properties')
+        .update(updatedInfo)
+        .eq('id', propertyId)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error updating property:', error.message);
+    } else if (data) {
+        setProperties(prev => prev.map(p => (p.id === propertyId ? data : p)));
+    }
+  };
+
   const updatePropertyNotes = async (propertyId: string, notes: string) => {
     const { data, error } = await supabase
         .from('properties')
@@ -116,6 +145,51 @@ const App: React.FC = () => {
         console.error('Error updating notes:', error.message);
     } else if (data) {
         setProperties(prev => prev.map(p => (p.id === propertyId ? data : p)));
+    }
+  };
+
+  const addTenant = async (tenant: Omit<Tenant, 'id' | 'notes'>) => {
+    const { data, error } = await supabase
+      .from('tenants')
+      .insert({ ...tenant, user_id: user?.id })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding tenant:', error.message);
+      throw error;
+    } else if (data) {
+      setTenants(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+  };
+
+  const updateTenant = async (tenantId: string, updatedInfo: Partial<Omit<Tenant, 'id' | 'property_id' | 'notes'>>) => {
+    const { data, error } = await supabase
+      .from('tenants')
+      .update(updatedInfo)
+      .eq('id', tenantId)
+      .select()
+      .single();
+    
+    if (error) {
+        console.error('Error updating tenant:', error.message);
+    } else if (data) {
+        setTenants(prev => prev.map(t => (t.id === tenantId ? data : t)).sort((a, b) => a.name.localeCompare(b.name)));
+    }
+  };
+
+  const updateTenantNotes = async (tenantId: string, notes: string) => {
+    const { data, error } = await supabase
+        .from('tenants')
+        .update({ notes })
+        .eq('id', tenantId)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error updating tenant notes:', error.message);
+    } else if (data) {
+        setTenants(prev => prev.map(t => (t.id === tenantId ? data : t)));
     }
   };
 
@@ -152,9 +226,22 @@ const App: React.FC = () => {
     setActiveView('properties');
   };
 
+  const handleSelectTenant = (tenantId: string) => {
+    setSelectedTenantId(tenantId);
+    setActiveView('tenantDetail');
+  };
+
+  const handleBackToTenants = () => {
+    setSelectedTenantId(null);
+    setActiveView('tenants');
+  };
+
   const handleNavigate = (view: string) => {
     if (view !== 'propertyDetail') {
       setSelectedPropertyId(null);
+    }
+    if (view !== 'tenantDetail') {
+      setSelectedTenantId(null);
     }
     setActiveView(view);
   };
@@ -167,6 +254,8 @@ const App: React.FC = () => {
         return <Properties properties={properties} addProperty={addProperty} deleteProperty={deleteProperty} onSelectProperty={handleSelectProperty} />;
       case 'transactions':
         return <TransactionsView transactions={transactions} addTransaction={addTransaction} deleteTransaction={deleteTransaction} properties={properties} />;
+      case 'tenants':
+        return <Tenants tenants={tenants} properties={properties} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
       case 'propertyDetail': {
         const property = properties.find(p => p.id === selectedPropertyId);
         if (!property) {
@@ -174,7 +263,26 @@ const App: React.FC = () => {
           return null;
         }
         const propertyTransactions = transactions.filter(t => t.property_id === selectedPropertyId);
-        return <PropertyDetail property={property} transactions={propertyTransactions} onBack={handleBackToProperties} onUpdateNotes={updatePropertyNotes} />;
+        return <PropertyDetail property={property} transactions={propertyTransactions} onBack={handleBackToProperties} onUpdateNotes={updatePropertyNotes} onUpdateProperty={updateProperty} />;
+      }
+      case 'tenantDetail': {
+        const tenant = tenants.find(t => t.id === selectedTenantId);
+        if (!tenant) {
+          handleBackToTenants();
+          return null;
+        }
+        const property = properties.find(p => p.id === tenant.property_id);
+        const propertyTransactions = transactions.filter(t => t.property_id === tenant.property_id);
+        return <TenantDetail 
+            tenant={tenant} 
+            property={property} 
+            transactions={propertyTransactions}
+            onBack={handleBackToTenants} 
+            onUpdateNotes={updateTenantNotes} 
+            onUpdateTenant={updateTenant}
+            onSelectProperty={handleSelectProperty}
+            addTransaction={addTransaction} 
+        />;
       }
       default:
         return <Dashboard properties={properties} transactions={transactions} />;
@@ -195,14 +303,20 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-100 text-slate-800">
-      <Sidebar activeView={activeView === 'propertyDetail' ? 'properties' : activeView} setActiveView={handleNavigate} />
+      <Sidebar 
+        activeView={
+          activeView === 'propertyDetail' ? 'properties' : 
+          activeView === 'tenantDetail' ? 'tenants' : activeView
+        } 
+        setActiveView={handleNavigate} 
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
           {renderView()}
         </main>
       </div>
-      <AIAssistant properties={properties} transactions={transactions} />
+      <AIAssistant properties={properties} transactions={transactions} tenants={tenants} />
     </div>
   );
 };

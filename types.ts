@@ -24,3 +24,12 @@ export interface Transaction {
   date: string;
   category: string;
 }
+
+export interface Tenant {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  property_id: string;
+  notes?: string;
+}

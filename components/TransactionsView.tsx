@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Property, Transaction } from '../types';
 import { TransactionType, IncomeCategories, ExpenseCategories } from '../types';
@@ -13,6 +14,12 @@ const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.124-2.033-2.124H8.033c-1.12 0-2.033.944-2.033 2.124v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+);
+
+const ArrowDownTrayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
     </svg>
 );
 
@@ -180,26 +187,80 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
+  const handleExportCSV = () => {
+    if (transactions.length === 0) {
+        alert("No transactions to export.");
+        return;
+    }
+
+    const headers = ['Date', 'Property Address', 'Description', 'Category', 'Type', 'Amount'];
+    
+    const csvRows = sortedTransactions.map(t => {
+        const propertyAddress = propertyMap.get(t.property_id) || 'N/A';
+        const amount = t.type === TransactionType.EXPENSE ? -t.amount : t.amount;
+        
+        const escapeCsvField = (field: string | number) => {
+            const stringField = String(field);
+            if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+                return `"${stringField.replace(/"/g, '""')}"`;
+            }
+            return stringField;
+        };
+
+        return [
+            new Date(t.date).toLocaleDateString(),
+            escapeCsvField(propertyAddress),
+            escapeCsvField(t.description),
+            escapeCsvField(t.category),
+            t.type,
+            amount
+        ].join(',');
+    });
+
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const currentDate = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `landlord-ledger-export-${currentDate}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-slate-900">Transactions</h1>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
             <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
                 <input
                     type="text"
-                    placeholder="Search description or category..."
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full sm:w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full sm:w-52 pl-10 pr-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
             </div>
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg shadow-md hover:bg-primary-700 transition-colors" disabled={properties.length === 0}>
+            <button
+                onClick={handleExportCSV}
+                className="flex items-center space-x-2 px-3 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+                title="Export all transactions to a CSV file"
+            >
+                <ArrowDownTrayIcon className="w-5 h-5" />
+                <span className="hidden sm:inline">Export CSV</span>
+            </button>
+            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center space-x-2 px-3 py-2 bg-primary-600 text-white rounded-lg shadow-md hover:bg-primary-700 transition-colors disabled:bg-primary-300" disabled={properties.length === 0}>
               <PlusIcon className="w-5 h-5" />
-              <span>Add Transaction</span>
+              <span className="hidden sm:inline">Add New</span>
             </button>
         </div>
       </div>
@@ -258,7 +319,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
                         </span>
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
-                        {t.type === TransactionType.INCOME ? '+' : '-'}{formatCurrency(t.amount)}
+                        {t.type === TransactionType.INCOME ? '+' : ''}{formatCurrency(t.amount)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button onClick={() => setTransactionToDelete(t)} className="text-slate-400 hover:text-red-600" aria-label={`Delete transaction ${t.description}`}>
