@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import type { Property, Transaction, Unit } from '../types';
+import type { Property, Transaction, Unit, Document } from '../types';
 import { TransactionType } from '../types';
 import { Modal } from './Modal';
 import { ConfirmModal } from './ConfirmModal';
@@ -97,15 +97,19 @@ interface PropertyDetailProps {
   property: Property;
   units: Unit[];
   transactions: Transaction[];
+  documents: Document[];
   onBack: () => void;
   onUpdateNotes: (propertyId: string, notes: string) => void;
   onUpdateProperty: (propertyId: string, updatedInfo: Partial<Omit<Property, 'id' | 'notes'>>) => void;
   addUnit: (unit: Omit<Unit, 'id'>) => void;
   updateUnit: (unitId: string, updatedInfo: Partial<Omit<Unit, 'id' | 'property_id'>>) => void;
   deleteUnit: (unitId: string) => void;
+  onUploadDocument: (file: File, metadata: Omit<Document, 'id' | 'created_at' | 'file_path' | 'file_name' | 'file_size' | 'file_type'>) => Promise<void>;
+  onDeleteDocument: (document: Document) => Promise<void>;
+  onDownloadDocument: (document: Document) => Promise<void>;
 }
 
-export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, transactions, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit }) => {
+export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, transactions, documents, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit, onUploadDocument, onDeleteDocument, onDownloadDocument }) => {
     const Recharts = (window as any).Recharts;
     const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts || {};
     

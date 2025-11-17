@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Tenant, Property, Transaction, Unit } from '../types';
-import { TransactionType } from '../types';
+import type { Tenant, Property, Transaction, Unit, Document } from '../types';
+import { TransactionType, DocumentTypes } from '../types';
 import { Modal } from './Modal';
+import { ConfirmModal } from './ConfirmModal';
 
 const ArrowLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -43,6 +44,18 @@ const CurrencyDollarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 const UserIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+);
+
+const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.124-2.033-2.124H8.033c-1.12 0-2.033.944-2.033 2.124v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+);
+
+const ArrowDownTrayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
     </svg>
 );
 
@@ -94,6 +107,7 @@ interface TenantDetailProps {
   unit?: Unit;
   property?: Property;
   transactions: Transaction[];
+  documents: Document[];
   properties: Property[];
   units: Unit[];
   onBack: () => void;
@@ -102,9 +116,12 @@ interface TenantDetailProps {
   onUpdateTenantUnit: (tenantId: string, unitId: string | null) => void;
   onSelectProperty: (propertyId: string) => void;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+  onUploadDocument: (file: File, metadata: Omit<Document, 'id' | 'created_at' | 'file_path' | 'file_name' | 'file_size' | 'file_type'>) => Promise<void>;
+  onDeleteDocument: (document: Document) => Promise<void>;
+  onDownloadDocument: (document: Document) => Promise<void>;
 }
 
-export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, unit, property, transactions, properties, units, onBack, onUpdateNotes, onUpdateTenant, onUpdateTenantUnit, onSelectProperty, addTransaction }) => {
+export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, unit, property, transactions, documents, properties, units, onBack, onUpdateNotes, onUpdateTenant, onUpdateTenantUnit, onSelectProperty, addTransaction, onUploadDocument, onDeleteDocument, onDownloadDocument }) => {
     const [notes, setNotes] = useState(tenant.notes || '');
     const [isSaving, setIsSaving] = useState(false);
     
@@ -117,6 +134,7 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, unit, proper
     const [paymentAmount, setPaymentAmount] = useState('');
 
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [docToDelete, setDocToDelete] = useState<Document | null>(null);
 
     useEffect(() => {
         setEditedName(tenant.name);
@@ -389,6 +407,29 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, unit, proper
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-bold mb-4 text-slate-800">Documents</h2>
+                <div className="space-y-3">
+                    {documents.map(doc => (
+                         <div key={doc.id} className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-slate-800">{doc.file_name}</p>
+                                <p className="text-xs text-slate-500">{doc.document_type} - {new Date(doc.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button onClick={() => onDownloadDocument(doc)} className="text-primary-600 hover:text-primary-900 p-1" title="Download">
+                                    <ArrowDownTrayIcon className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => setDocToDelete(doc)} className="text-red-600 hover:text-red-900 p-1" title="Delete">
+                                    <TrashIcon className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {documents.length === 0 && <p className="text-slate-500 text-sm text-center py-4">No documents found for this tenant.</p>}
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-bold mb-4 text-slate-800">Tenant Notes</h2>
                 <textarea
                     value={notes}
@@ -418,6 +459,20 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, unit, proper
                     currentUnitId={tenant.unit_id}
                 />
             </Modal>
+            
+            <ConfirmModal
+                isOpen={!!docToDelete}
+                onClose={() => setDocToDelete(null)}
+                onConfirm={() => {
+                    if (docToDelete) {
+                        onDeleteDocument(docToDelete);
+                        setDocToDelete(null);
+                    }
+                }}
+                title="Delete Document?"
+            >
+                Are you sure you want to delete "{docToDelete?.file_name}"? This action cannot be undone.
+            </ConfirmModal>
         </div>
     );
 };

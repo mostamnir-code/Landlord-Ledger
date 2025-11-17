@@ -7,6 +7,8 @@ export enum TransactionType {
 export const DefaultIncomeCategories = ['Rent', 'Late Fees', 'Utilities Reimbursement', 'Security Deposit', 'Parking Fees', 'Other'] as const;
 export const DefaultExpenseCategories = ['Repairs', 'Maintenance', 'Utilities', 'Mortgage', 'Property Tax', 'Insurance', 'Supplies', 'HOA Fees', 'Management Fees', 'Advertising', 'Legal Fees', 'Landscaping', 'Travel', 'Other'] as const;
 
+export const DocumentTypes = ['Lease Agreement', 'Receipt', 'Insurance Policy', 'Notice', 'Photo', 'Other'] as const;
+
 export interface Property {
   id: string;
   address: string;
@@ -39,4 +41,27 @@ export interface Tenant {
   phone: string;
   unit_id: string | null;
   notes?: string;
+}
+
+export interface Reminder {
+  id: string;
+  tenant_id: string;
+  enabled: boolean;
+  due_date_reminder_days: number;
+  late_fee_reminder_days: number;
+  late_fee_amount: number;
+}
+
+export interface Document {
+  id: string;
+  created_at: string;
+  property_id: string | null;
+  unit_id: string | null;
+  tenant_id: string | null;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  document_type: string;
+  description: string | null;
 }

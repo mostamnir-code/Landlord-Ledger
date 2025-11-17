@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -8,9 +9,11 @@ import { TransactionsView } from './components/TransactionsView';
 import { PropertyDetail } from './components/PropertyDetail';
 import { Tenants } from './components/Tenants';
 import { TenantDetail } from './components/TenantDetail';
+import { Reminders } from './components/Reminders';
+import { Documents } from './components/Documents';
 import { AIAssistant } from './components/AIAssistant';
 import { Auth } from './components/Auth';
-import type { Property, Transaction, Tenant, Unit } from './types';
+import type { Property, Transaction, Tenant, Unit, Reminder, Document } from './types';
 import { supabase } from './services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
@@ -38,6 +41,8 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
 
   useEffect(() => {
     const getSession = async () => {
@@ -88,6 +93,21 @@ const App: React.FC = () => {
 
         if (tenantsError) console.error('Error fetching tenants:', tenantsError.message);
         else setTenants(tenantsData || []);
+        
+        const { data: remindersData, error: remindersError } = await supabase
+            .from('reminders')
+            .select('*');
+
+        if (remindersError) console.error('Error fetching reminders:', remindersError.message);
+        else setReminders(remindersData || []);
+        
+        const { data: documentsData, error: documentsError } = await supabase
+            .from('documents')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (documentsError) console.error('Error fetching documents:', documentsError.message);
+        else setDocuments(documentsData || []);
       }
     };
 
@@ -319,6 +339,109 @@ const App: React.FC = () => {
     }
   };
 
+  const upsertReminder = async (reminderData: Partial<Reminder> & { tenant_id: string }) => {
+    const { data, error } = await supabase
+        .from('reminders')
+        .upsert({ ...reminderData, user_id: user?.id }, { onConflict: 'tenant_id' })
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error upserting reminder:', error.message);
+        throw error;
+    } else if (data) {
+        setReminders(prev => {
+            const index = prev.findIndex(r => r.tenant_id === data.tenant_id);
+            if (index !== -1) {
+                const newReminders = [...prev];
+                newReminders[index] = data;
+                return newReminders;
+            }
+            return [...prev, data];
+        });
+    }
+  };
+
+  const uploadDocument = async (file: File, metadata: Omit<Document, 'id' | 'created_at' | 'file_path' | 'file_name' | 'file_size' | 'file_type'>) => {
+    if (!user) throw new Error("User not authenticated");
+
+    const filePath = `${user.id}/${Date.now()}-${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        console.error('Error uploading file:', uploadError.message);
+        throw uploadError;
+    }
+
+    const { data, error: insertError } = await supabase
+        .from('documents')
+        .insert({
+            ...metadata,
+            user_id: user.id,
+            file_path: filePath,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+        })
+        .select()
+        .single();
+    
+    if (insertError) {
+        console.error('Error inserting document record:', insertError.message);
+        await supabase.storage.from('documents').remove([filePath]);
+        throw insertError;
+    }
+
+    if (data) {
+        setDocuments(prev => [data, ...prev]);
+    }
+  };
+
+  const deleteDocument = async (document: Document) => {
+      const { error: storageError } = await supabase.storage
+          .from('documents')
+          .remove([document.file_path]);
+
+      if (storageError) {
+          console.error('Error deleting file from storage:', storageError.message);
+      }
+
+      const { error: dbError } = await supabase
+          .from('documents')
+          .delete()
+          .eq('id', document.id);
+      
+      if (dbError) {
+          console.error('Error deleting document record:', dbError.message);
+          throw dbError;
+      }
+
+      setDocuments(prev => prev.filter(d => d.id !== document.id));
+  };
+
+  // FIX: Renamed the 'document' parameter to 'docToDownload' to avoid conflict with the global 'document' object.
+  const downloadDocument = async (docToDownload: Document) => {
+      const { data, error } = await supabase.storage.from('documents').download(docToDownload.file_path);
+      if (error) {
+          console.error("Error downloading file:", error.message);
+          alert("Could not download file.");
+          return;
+      }
+      if (data) {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = docToDownload.file_name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+      }
+  };
+
   const handleSelectProperty = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
     setActiveView('propertyDetail');
@@ -359,6 +482,18 @@ const App: React.FC = () => {
         return <TransactionsView transactions={transactions} addTransaction={addTransaction} deleteTransaction={deleteTransaction} updateTransaction={updateTransaction} properties={properties} units={units} />;
       case 'tenants':
         return <Tenants tenants={tenants} properties={properties} units={units} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
+      case 'reminders':
+        return <Reminders tenants={tenants} units={units} properties={properties} transactions={transactions} reminders={reminders} upsertReminder={upsertReminder} />;
+      case 'documents':
+        return <Documents 
+          documents={documents}
+          properties={properties}
+          units={units}
+          tenants={tenants}
+          onUpload={uploadDocument}
+          onDelete={deleteDocument}
+          onDownload={downloadDocument}
+        />;
       case 'propertyDetail': {
         const property = properties.find(p => p.id === selectedPropertyId);
         if (!property) {
@@ -367,16 +502,21 @@ const App: React.FC = () => {
         }
         const propertyUnits = units.filter(u => u.property_id === selectedPropertyId);
         const propertyTransactions = transactions.filter(t => t.property_id === selectedPropertyId);
+        const propertyDocuments = documents.filter(d => d.property_id === selectedPropertyId);
         return <PropertyDetail 
           property={property} 
           units={propertyUnits} 
           transactions={propertyTransactions} 
+          documents={propertyDocuments}
           onBack={handleBackToProperties} 
           onUpdateNotes={updatePropertyNotes} 
           onUpdateProperty={updateProperty} 
           addUnit={addUnit}
           updateUnit={updateUnit}
           deleteUnit={deleteUnit}
+          onUploadDocument={uploadDocument}
+          onDeleteDocument={deleteDocument}
+          onDownloadDocument={downloadDocument}
         />;
       }
       case 'tenantDetail': {
@@ -388,12 +528,14 @@ const App: React.FC = () => {
         const unit = units.find(u => u.id === tenant.unit_id);
         const property = unit ? properties.find(p => p.id === unit.property_id) : undefined;
         const propertyTransactions = tenant.unit_id ? transactions.filter(t => t.unit_id === tenant.unit_id) : [];
+        const tenantDocuments = documents.filter(d => d.tenant_id === tenant.id);
 
         return <TenantDetail 
             tenant={tenant} 
             unit={unit}
             property={property} 
             transactions={propertyTransactions}
+            documents={tenantDocuments}
             properties={properties}
             units={units}
             onBack={handleBackToTenants} 
@@ -402,6 +544,9 @@ const App: React.FC = () => {
             onUpdateTenantUnit={updateTenantUnit}
             onSelectProperty={handleSelectProperty}
             addTransaction={addTransaction} 
+            onUploadDocument={uploadDocument}
+            onDeleteDocument={deleteDocument}
+            onDownloadDocument={downloadDocument}
         />;
       }
       default:
