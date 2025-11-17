@@ -38,7 +38,6 @@ const ChartBarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
-
 interface DashboardProps {
   properties: Property[];
   transactions: Transaction[];
@@ -201,7 +200,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card title="Total Income" value={formatCurrency(summary.totalIncome)} icon={<ArrowTrendingUpIcon className="w-6 h-6" />} />
         <Card title="Total Expenses" value={formatCurrency(summary.totalExpenses)} icon={<ArrowTrendingDownIcon className="w-6 h-6" />} />

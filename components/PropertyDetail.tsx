@@ -1,7 +1,9 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import type { Property, Transaction } from '../types';
+import type { Property, Transaction, Unit } from '../types';
 import { TransactionType } from '../types';
+import { Modal } from './Modal';
+import { ConfirmModal } from './ConfirmModal';
 
 const ArrowLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -39,68 +41,85 @@ const ArrowTrendingDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
     </svg>
 );
 
-const UserIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const PencilIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
     </svg>
 );
 
-const CalendarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0h18M-4.5 12h22.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.124-2.033-2.124H8.033c-1.12 0-2.033.944-2.033 2.124v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
     </svg>
 );
+
+const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) => void; onClose: () => void; initialData?: Unit | null }> = ({ onSave, onClose, initialData }) => {
+    const [unitNumber, setUnitNumber] = useState(initialData?.unit_number || '');
+    const [rent, setRent] = useState(initialData?.rent.toString() || '');
+    const [leaseEnd, setLeaseEnd] = useState(initialData?.lease_end || '');
+  
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!unitNumber || !rent || !leaseEnd) return;
+      onSave({
+        unit_number: unitNumber,
+        rent: parseFloat(rent),
+        lease_end: leaseEnd,
+      });
+      onClose();
+    };
+  
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="unitNumber" className="block text-sm font-medium text-slate-700">Unit Number / Name</label>
+          <input type="text" id="unitNumber" value={unitNumber} onChange={(e) => setUnitNumber(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g., Apt 101, Unit B" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+              <label htmlFor="rent" className="block text-sm font-medium text-slate-700">Monthly Rent ($)</label>
+              <input type="number" id="rent" value={rent} onChange={(e) => setRent(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+          </div>
+          <div>
+              <label htmlFor="leaseEnd" className="block text-sm font-medium text-slate-700">Lease End Date</label>
+              <input type="date" id="leaseEnd" value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+          </div>
+        </div>
+        <div className="flex justify-end pt-4 space-x-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
+          <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{initialData ? 'Save Changes' : 'Add Unit'}</button>
+        </div>
+      </form>
+    );
+};
 
 interface PropertyDetailProps {
   property: Property;
+  units: Unit[];
   transactions: Transaction[];
   onBack: () => void;
   onUpdateNotes: (propertyId: string, notes: string) => void;
-  onUpdateProperty: (propertyId: string, updatedInfo: Partial<Omit<Property, 'id' | 'notes' | 'address'>>) => void;
+  onUpdateProperty: (propertyId: string, updatedInfo: Partial<Omit<Property, 'id' | 'notes'>>) => void;
+  addUnit: (unit: Omit<Unit, 'id'>) => void;
+  updateUnit: (unitId: string, updatedInfo: Partial<Omit<Unit, 'id' | 'property_id'>>) => void;
+  deleteUnit: (unitId: string) => void;
 }
 
-export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, transactions, onBack, onUpdateNotes, onUpdateProperty }) => {
+export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, transactions, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit }) => {
     const Recharts = (window as any).Recharts;
     const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts || {};
     
     const [notes, setNotes] = useState(property.notes || '');
     const [isSavingNotes, setIsSavingNotes] = useState(false);
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedTenant, setEditedTenant] = useState(property.tenant);
-    const [editedRent, setEditedRent] = useState(String(property.rent));
-    const [editedLeaseEnd, setEditedLeaseEnd] = useState(property.lease_end);
+    const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
+    const [unitToEdit, setUnitToEdit] = useState<Unit | null>(null);
+    const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
-        if (property) {
-            setNotes(property.notes || '');
-            setEditedTenant(property.tenant);
-            setEditedRent(String(property.rent));
-            setEditedLeaseEnd(property.lease_end);
-            setIsEditing(false); // Reset editing state when property changes
-        }
+        setNotes(property.notes || '');
     }, [property]);
-
-    const handleSave = () => {
-        const rent = parseFloat(editedRent);
-        if (isNaN(rent) || rent < 0) {
-            alert('Please enter a valid positive number for rent.');
-            return;
-        }
-        onUpdateProperty(property.id, { 
-            tenant: editedTenant, 
-            rent: rent, 
-            lease_end: editedLeaseEnd 
-        });
-        setIsEditing(false);
-    };
-
-    const handleCancel = () => {
-        setEditedTenant(property.tenant);
-        setEditedRent(String(property.rent));
-        setEditedLeaseEnd(property.lease_end);
-        setIsEditing(false);
-    };
 
     const handleSaveNotes = () => {
         setIsSavingNotes(true);
@@ -110,6 +129,16 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, transa
         }, 1500);
     };
 
+    const handleAddUnit = (unitData: Omit<Unit, 'id' | 'property_id'>) => {
+        addUnit({ ...unitData, property_id: property.id });
+    };
+
+    const handleUpdateUnit = (unitData: Omit<Unit, 'id' | 'property_id'>) => {
+        if (unitToEdit) {
+            updateUnit(unitToEdit.id, unitData);
+        }
+    };
+    
     const summary = useMemo(() => {
         const totalIncome = transactions
             .filter(t => t.type === TransactionType.INCOME)
@@ -174,9 +203,15 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, transa
         return null;
     };
     
-    const sortedTransactions = useMemo(() => {
-        return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [transactions]);
+    const filteredTransactions = useMemo(() => {
+        return [...transactions]
+            .filter(t => {
+                if (startDate && t.date < startDate) return false;
+                if (endDate && t.date > endDate) return false;
+                return true;
+            })
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [transactions, startDate, endDate]);
     
     return (
         <div className="space-y-8">
@@ -186,7 +221,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, transa
                 </button>
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">{property.address}</h1>
-                    <p className="text-slate-500">Profitability Analysis</p>
+                    <p className="text-slate-500">Property Overview & Units</p>
                 </div>
             </div>
 
@@ -199,141 +234,161 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, transa
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-slate-800">Lease & Financial Details</h2>
-                        {isEditing ? (
-                            <div className="flex space-x-2">
-                                <button onClick={handleSave} className="px-3 py-1 bg-primary-600 text-white rounded-md text-sm hover:bg-primary-700">Save</button>
-                                <button onClick={handleCancel} className="px-3 py-1 bg-slate-200 text-slate-800 rounded-md text-sm hover:bg-slate-300">Cancel</button>
-                            </div>
-                        ) : (
-                            <button onClick={() => setIsEditing(true)} className="px-3 py-1 bg-slate-200 text-slate-800 rounded-md text-sm font-medium hover:bg-slate-300">Edit</button>
-                        )}
-                    </div>
-                    {isEditing ? (
-                         <div className="space-y-4">
-                            <div className="flex items-center space-x-3">
-                                <UserIcon className="w-6 h-6 text-primary-600 flex-shrink-0" />
-                                <div className="w-full">
-                                    <label className="text-xs text-slate-500">Tenant Name</label>
-                                    <input type="text" value={editedTenant} onChange={(e) => setEditedTenant(e.target.value)} className="font-medium text-slate-800 w-full p-1 border border-slate-300 rounded-md" />
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <CurrencyDollarIcon className="w-6 h-6 text-primary-600 flex-shrink-0" />
-                                <div className="w-full">
-                                    <label className="text-xs text-slate-500">Monthly Rent</label>
-                                    <input type="number" value={editedRent} onChange={(e) => setEditedRent(e.target.value)} className="font-medium text-slate-800 w-full p-1 border border-slate-300 rounded-md" />
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <CalendarIcon className="w-6 h-6 text-primary-600 flex-shrink-0" />
-                                <div className="w-full">
-                                    <label className="text-xs text-slate-500">Lease End Date</label>
-                                    <input type="date" value={editedLeaseEnd} onChange={(e) => setEditedLeaseEnd(e.target.value)} className="font-medium text-slate-800 w-full p-1 border border-slate-300 rounded-md" />
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div className="flex items-center space-x-3">
-                                <UserIcon className="w-6 h-6 text-primary-600" />
-                                <div>
-                                    <p className="text-sm text-slate-500">Tenant Name</p>
-                                    <p className="font-medium text-slate-800">{property.tenant}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <CurrencyDollarIcon className="w-6 h-6 text-primary-600" />
-                                <div>
-                                    <p className="text-sm text-slate-500">Monthly Rent</p>
-                                    <p className="font-medium text-slate-800">{formatCurrency(property.rent)}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <CalendarIcon className="w-6 h-6 text-primary-600" />
-                                <div>
-                                    <p className="text-sm text-slate-500">Lease End Date</p>
-                                    <p className="font-medium text-slate-800">{new Date(property.lease_end).toLocaleDateString()}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-slate-800">Units</h2>
+                    <button onClick={() => setIsAddUnitModalOpen(true)} className="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-md hover:bg-primary-700">Add Unit</button>
                 </div>
+                {units.length > 0 ? (
+                    <div className="space-y-3">
+                        {units.map(unit => (
+                            <div key={unit.id} className="bg-slate-50 p-4 rounded-md border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                                <div>
+                                    <p className="font-bold text-slate-800">{unit.unit_number}</p>
+                                    <p className="text-sm text-slate-500">Rent: {formatCurrency(unit.rent)}/mo | Lease Ends: {new Date(unit.lease_end).toLocaleDateString()}</p>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <button onClick={() => setUnitToEdit(unit)} className="text-primary-600 hover:text-primary-900 p-2" title="Edit unit">
+                                        <PencilIcon className="w-5 h-5" />
+                                    </button>
+                                    <button onClick={() => setUnitToDelete(unit)} className="text-red-600 hover:text-red-900 p-2" title="Delete unit">
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-slate-500 text-center py-4">No units have been added to this property yet.</p>
+                )}
+            </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold mb-4 text-slate-800">Monthly Performance</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-xl font-bold mb-4 text-slate-800">Financial Performance</h2>
                     <div style={{ width: '100%', height: 300 }}>
-                    {Recharts && BarChart ? (
-                        chartData.length > 0 ? (
+                    {Recharts && BarChart && chartData.length > 0 ? (
                         <ResponsiveContainer>
-                        <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                        <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-                            <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke="#64748b" fontSize={12} />
+                            <XAxis dataKey="name" stroke="#64748b" />
+                            <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke="#64748b" />
                             <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }} />
                             <Legend />
                             <Bar dataKey="Income" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                             <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
                         </BarChart>
                         </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-full"><p className="text-slate-500">No data for chart.</p></div>
-                        )
                     ) : (
-                        <div className="flex items-center justify-center h-full"><p className="text-slate-500">Chart library is loading...</p></div>
+                        <div className="flex items-center justify-center h-full">
+                        <p className="text-slate-500 text-center">No transaction data available to display chart.</p>
+                        </div>
                     )}
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-xl font-bold mb-4 text-slate-800">Property Notes</h2>
+                    <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add any relevant notes for this property..."
+                        className="w-full h-32 p-3 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                        aria-label="Property Notes"
+                    />
+                    <div className="flex justify-end items-center mt-4">
+                        {isSavingNotes && <span className="text-sm text-green-600 mr-4 transition-opacity">Saved!</span>}
+                        <button
+                            onClick={handleSaveNotes}
+                            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-300 disabled:cursor-not-allowed"
+                            disabled={notes === (property.notes || '') || isSavingNotes}
+                        >
+                            {isSavingNotes ? 'Saving...' : 'Save Notes'}
+                        </button>
                     </div>
                 </div>
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-bold mb-4 text-slate-800">Recent Transactions</h2>
-                <div className="overflow-y-auto" style={{maxHeight: '300px'}}>
-                    {sortedTransactions.length > 0 ? (
-                    <table className="min-w-full">
-                        <tbody className="divide-y divide-slate-200">
-                            {sortedTransactions.map(t => (
-                            <tr key={t.id}>
-                                <td className="py-3 pr-3">
-                                    <p className="text-sm font-medium text-slate-800">{t.description}</p>
-                                    <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString()}</p>
+                
+                <div className="flex flex-wrap gap-4 mb-4 items-end">
+                    <div>
+                        <label htmlFor="start-date" className="block text-sm font-medium text-slate-700">Start Date</label>
+                        <input
+                            type="date"
+                            id="start-date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                        />
+                    </div>
+                     <div>
+                        <label htmlFor="end-date" className="block text-sm font-medium text-slate-700">End Date</label>
+                        <input
+                            type="date"
+                            id="end-date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                             className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    {filteredTransactions.length > 0 ? (
+                        <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
+                            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {filteredTransactions.map(t => (
+                            <tr key={t.id} className="hover:bg-slate-50">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{t.description}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">
+                                    {t.category}
+                                </span>
                                 </td>
-                                <td className={`py-3 pl-3 text-right text-sm font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
-                                    {t.type === TransactionType.INCOME ? '+' : '-'}{formatCurrency(t.amount)}
+                                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
+                                {t.type === TransactionType.INCOME ? '+' : ''}{formatCurrency(t.amount)}
                                 </td>
                             </tr>
                             ))}
                         </tbody>
-                    </table>
+                        </table>
                     ) : (
-                        <div className="flex items-center justify-center h-full py-4"><p className="text-slate-500">No transactions for this property.</p></div>
+                        <div className="text-center py-8">
+                            <p className="text-slate-500">No transactions found for the selected date range.</p>
+                        </div>
                     )}
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-bold mb-4 text-slate-800">Property Notes</h2>
-                <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add any relevant notes for this property..."
-                    className="w-full h-32 p-3 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm"
-                    aria-label="Property Notes"
-                />
-                <div className="flex justify-end items-center mt-4">
-                    {isSavingNotes && <span className="text-sm text-green-600 mr-4 transition-opacity">Saved!</span>}
-                    <button
-                        onClick={handleSaveNotes}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-300 disabled:cursor-not-allowed"
-                        disabled={notes === (property.notes || '') || isSavingNotes}
-                    >
-                        {isSavingNotes ? 'Saving...' : 'Save Notes'}
-                    </button>
-                </div>
-            </div>
+            <Modal isOpen={isAddUnitModalOpen} onClose={() => setIsAddUnitModalOpen(false)} title="Add New Unit">
+                <AddUnitForm onSave={handleAddUnit} onClose={() => setIsAddUnitModalOpen(false)} />
+            </Modal>
+            <Modal isOpen={!!unitToEdit} onClose={() => setUnitToEdit(null)} title="Edit Unit">
+                <AddUnitForm onSave={handleUpdateUnit} onClose={() => setUnitToEdit(null)} initialData={unitToEdit} />
+            </Modal>
+            <ConfirmModal
+                isOpen={!!unitToDelete}
+                onClose={() => setUnitToDelete(null)}
+                onConfirm={() => {
+                    if (unitToDelete) {
+                        deleteUnit(unitToDelete.id);
+                        setUnitToDelete(null);
+                    }
+                }}
+                title="Delete Unit?"
+            >
+                Are you sure you want to delete unit "{unitToDelete?.unit_number}"? This will also unassign any tenants and delete associated transactions. This action cannot be undone.
+            </ConfirmModal>
         </div>
     );
 };

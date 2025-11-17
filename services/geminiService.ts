@@ -1,5 +1,6 @@
+
 import { GoogleGenAI } from "@google/genai";
-import type { Property, Transaction, Tenant } from '../types';
+import type { Property, Transaction, Tenant, Unit } from '../types';
 
 if (!process.env.API_KEY) {
   console.warn("API_KEY environment variable not set. AI Assistant will not work.");
@@ -11,7 +12,8 @@ export const getFinancialInsight = async (
   query: string, 
   properties: Property[], 
   transactions: Transaction[],
-  tenants: Tenant[]
+  tenants: Tenant[],
+  units: Unit[],
 ): Promise<string> => {
   if (!process.env.API_KEY) {
     return "API key is not configured. Please set the API_KEY environment variable.";
@@ -19,9 +21,9 @@ export const getFinancialInsight = async (
 
   const model = 'gemini-2.5-flash';
   
-  const dataContext = JSON.stringify({ properties, transactions, tenants }, null, 2);
+  const dataContext = JSON.stringify({ properties, units, transactions, tenants }, null, 2);
 
-  const systemInstruction = `You are an expert financial analyst for a small landlord. Your role is to analyze the provided JSON data about properties, transactions, and tenants and answer the user's questions. Provide clear, concise, and helpful insights. All calculations should be based *only* on the data provided. Today's date is ${new Date().toISOString().split('T')[0]}.`;
+  const systemInstruction = `You are an expert financial analyst for a small landlord. Your role is to analyze the provided JSON data about properties, units, transactions, and tenants and answer the user's questions. Provide clear, concise, and helpful insights. All calculations should be based *only* on the data provided. Today's date is ${new Date().toISOString().split('T')[0]}.`;
 
   const prompt = `
     Here is the landlord's data:

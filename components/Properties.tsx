@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import type { Property } from '../types';
+import type { Property, Unit } from '../types';
 import { Modal } from './Modal';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -24,7 +25,7 @@ const EmptyPropertiesIllustration: React.FC<React.SVGProps<SVGSVGElement>> = (pr
     </svg>
 );
 
-const PropertyCard: React.FC<{ property: Property; onDelete: () => void; onSelect: () => void; }> = ({ property, onDelete, onSelect }) => (
+const PropertyCard: React.FC<{ property: Property; unitCount: number; onDelete: () => void; onSelect: () => void; }> = ({ property, unitCount, onDelete, onSelect }) => (
   <div onClick={onSelect} className="bg-white p-6 rounded-lg shadow-md border border-slate-200 hover:shadow-lg transition-shadow flex flex-col cursor-pointer">
     <div className="flex justify-between items-start">
         <h3 className="text-lg font-bold text-primary-700">{property.address}</h3>
@@ -40,43 +41,26 @@ const PropertyCard: React.FC<{ property: Property; onDelete: () => void; onSelec
         </button>
     </div>
     <div className="mt-4 space-y-2 text-sm text-slate-600 flex-grow">
-      <p><span className="font-semibold">Tenant:</span> {property.tenant}</p>
-      <p><span className="font-semibold">Rent:</span> ${property.rent.toLocaleString()}/month</p>
-      <p><span className="font-semibold">Lease End:</span> {new Date(property.lease_end).toLocaleDateString()}</p>
+      <p><span className="font-semibold">{unitCount}</span> {unitCount === 1 ? 'Unit' : 'Units'}</p>
     </div>
   </div>
 );
 
 const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id' | 'notes'>) => void; onClose: () => void; }> = ({ onAdd, onClose }) => {
   const [address, setAddress] = useState('');
-  const [tenant, setTenant] = useState('');
-  const [rent, setRent] = useState('');
-  const [leaseEnd, setLeaseEnd] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address || !tenant || !rent || !leaseEnd) return;
-    onAdd({ address, tenant, rent: parseFloat(rent), lease_end: leaseEnd });
+    if (!address) return;
+    onAdd({ address });
     onClose();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="address" className="block text-sm font-medium text-slate-700">Address</label>
-        <input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-      </div>
-      <div>
-        <label htmlFor="tenant" className="block text-sm font-medium text-slate-700">Tenant Name</label>
-        <input type="text" id="tenant" value={tenant} onChange={(e) => setTenant(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-      </div>
-      <div>
-        <label htmlFor="rent" className="block text-sm font-medium text-slate-700">Monthly Rent</label>
-        <input type="number" id="rent" value={rent} onChange={(e) => setRent(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-      </div>
-      <div>
-        <label htmlFor="leaseEnd" className="block text-sm font-medium text-slate-700">Lease End Date</label>
-        <input type="date" id="leaseEnd" value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+        <label htmlFor="address" className="block text-sm font-medium text-slate-700">Property Address</label>
+        <input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g., 123 Main St, Anytown, USA" />
       </div>
       <div className="flex justify-end pt-4 space-x-2">
         <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
@@ -88,14 +72,20 @@ const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id' | 'notes
 
 interface PropertiesProps {
   properties: Property[];
+  units: Unit[];
   addProperty: (property: Omit<Property, 'id' | 'notes'>) => void;
   deleteProperty: (propertyId: string) => void;
   onSelectProperty: (propertyId: string) => void;
 }
 
-export const Properties: React.FC<PropertiesProps> = ({ properties, addProperty, deleteProperty, onSelectProperty }) => {
+export const Properties: React.FC<PropertiesProps> = ({ properties, units, addProperty, deleteProperty, onSelectProperty }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+
+  const unitCounts = properties.reduce((acc, property) => {
+    acc[property.id] = units.filter(u => u.property_id === property.id).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="space-y-6">
@@ -113,6 +103,7 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, addProperty,
             <PropertyCard
               key={prop.id}
               property={prop}
+              unitCount={unitCounts[prop.id] || 0}
               onDelete={() => setPropertyToDelete(prop)}
               onSelect={() => onSelectProperty(prop.id)}
             />
@@ -136,11 +127,12 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, addProperty,
         onConfirm={() => {
             if (propertyToDelete) {
                 deleteProperty(propertyToDelete.id);
+                setPropertyToDelete(null);
             }
         }}
         title="Delete Property?"
       >
-        Are you sure you want to delete the property at "{propertyToDelete?.address}"? This will also delete all associated income and expense records. This action cannot be undone.
+        Are you sure you want to delete the property at "{propertyToDelete?.address}"? This will also delete all associated units and income/expense records. This action cannot be undone.
       </ConfirmModal>
     </div>
   );

@@ -10,8 +10,7 @@ import { Tenants } from './components/Tenants';
 import { TenantDetail } from './components/TenantDetail';
 import { AIAssistant } from './components/AIAssistant';
 import { Auth } from './components/Auth';
-import type { Property, Transaction, Tenant } from './types';
-import { TransactionType } from './types';
+import type { Property, Transaction, Tenant, Unit } from './types';
 import { supabase } from './services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
@@ -38,6 +37,7 @@ const App: React.FC = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
 
   useEffect(() => {
     const getSession = async () => {
@@ -65,6 +65,14 @@ const App: React.FC = () => {
         if (propertiesError) console.error('Error fetching properties:', propertiesError.message);
         else setProperties(propertiesData || []);
 
+        const { data: unitsData, error: unitsError } = await supabase
+            .from('units')
+            .select('*')
+            .order('unit_number', { ascending: true });
+
+        if (unitsError) console.error('Error fetching units:', unitsError.message);
+        else setUnits(unitsData || []);
+
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select('*')
@@ -80,7 +88,6 @@ const App: React.FC = () => {
 
         if (tenantsError) console.error('Error fetching tenants:', tenantsError.message);
         else setTenants(tenantsData || []);
-
       }
     };
 
@@ -102,23 +109,33 @@ const App: React.FC = () => {
   };
 
   const deleteProperty = async (propertyId: string) => {
-    // Delete associated transactions first
+    // This should ideally be a transaction or a backend function
+    // For now, cascade deletes manually
+    // 1. Delete associated transactions
     const { error: transError } = await supabase.from('transactions').delete().eq('property_id', propertyId);
     if (transError) {
         console.error('Error deleting transactions for property:', transError.message);
         return;
     }
-
+    // 2. Delete associated units
+    const { error: unitsError } = await supabase.from('units').delete().eq('property_id', propertyId);
+    if(unitsError) {
+        console.error('Error deleting units for property:', unitsError.message);
+        return;
+    }
+    // 3. Delete property itself
     const { error: propError } = await supabase.from('properties').delete().eq('id', propertyId);
     if (propError) {
         console.error('Error deleting property:', propError.message);
     } else {
         setProperties(prev => prev.filter(p => p.id !== propertyId));
+        setUnits(prev => prev.filter(u => u.property_id !== propertyId));
         setTransactions(prev => prev.filter(t => t.property_id !== propertyId));
+        // Tenants will be unassigned, which is desired behavior
     }
   };
 
-  const updateProperty = async (propertyId: string, updatedInfo: Partial<Omit<Property, 'id' | 'notes' | 'address'>>) => {
+  const updateProperty = async (propertyId: string, updatedInfo: Partial<Omit<Property, 'id' | 'notes'>>) => {
     const { data, error } = await supabase
         .from('properties')
         .update(updatedInfo)
@@ -148,6 +165,59 @@ const App: React.FC = () => {
     }
   };
 
+  const addUnit = async (unit: Omit<Unit, 'id'>) => {
+    const { data, error } = await supabase
+      .from('units')
+      .insert({ ...unit, user_id: user?.id })
+      .select()
+      .single();
+
+    if (error) {
+        console.error('Error adding unit:', error.message);
+    } else if (data) {
+        setUnits(prev => [...prev, data].sort((a, b) => a.unit_number.localeCompare(b.unit_number)));
+    }
+  };
+
+  const updateUnit = async (unitId: string, updatedInfo: Partial<Omit<Unit, 'id' | 'property_id'>>) => {
+    const { data, error } = await supabase
+      .from('units')
+      .update(updatedInfo)
+      .eq('id', unitId)
+      .select()
+      .single();
+    
+    if (error) {
+        console.error('Error updating unit:', error.message);
+    } else if (data) {
+        setUnits(prev => prev.map(u => (u.id === unitId ? data : u)));
+    }
+  };
+
+  const deleteUnit = async (unitId: string) => {
+     // 1. Unassign tenants
+     const { error: tenantError } = await supabase.from('tenants').update({ unit_id: null }).eq('unit_id', unitId);
+     if (tenantError) {
+         console.error('Error unassigning tenants:', tenantError.message);
+         return;
+     }
+     // 2. Delete associated transactions
+     const { error: transError } = await supabase.from('transactions').delete().eq('unit_id', unitId);
+     if (transError) {
+         console.error('Error deleting transactions for unit:', transError.message);
+         return;
+     }
+     // 3. Delete unit
+     const { error: unitError } = await supabase.from('units').delete().eq('id', unitId);
+     if (unitError) {
+         console.error('Error deleting unit:', unitError.message);
+     } else {
+         setUnits(prev => prev.filter(u => u.id !== unitId));
+         setTenants(prev => prev.map(t => t.unit_id === unitId ? { ...t, unit_id: null } : t));
+         setTransactions(prev => prev.filter(t => t.unit_id !== unitId));
+     }
+  };
+
   const addTenant = async (tenant: Omit<Tenant, 'id' | 'notes'>) => {
     const { data, error } = await supabase
       .from('tenants')
@@ -163,7 +233,7 @@ const App: React.FC = () => {
     }
   };
 
-  const updateTenant = async (tenantId: string, updatedInfo: Partial<Omit<Tenant, 'id' | 'property_id' | 'notes'>>) => {
+  const updateTenant = async (tenantId: string, updatedInfo: Partial<Omit<Tenant, 'id' | 'notes'>>) => {
     const { data, error } = await supabase
       .from('tenants')
       .update(updatedInfo)
@@ -193,6 +263,21 @@ const App: React.FC = () => {
     }
   };
 
+  const updateTenantUnit = async (tenantId: string, unitId: string | null) => {
+    const { data, error } = await supabase
+        .from('tenants')
+        .update({ unit_id: unitId })
+        .eq('id', tenantId)
+        .select()
+        .single();
+    
+    if (error) {
+        console.error('Error updating tenant property:', error.message);
+    } else if (data) {
+        setTenants(prev => prev.map(t => (t.id === tenantId ? data : t)));
+    }
+  };
+
   const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     const { data, error } = await supabase
       .from('transactions')
@@ -204,6 +289,24 @@ const App: React.FC = () => {
         console.error('Error adding transaction:', error.message);
     } else if (data) {
         setTransactions(prev => [...prev, data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    }
+  };
+
+  const updateTransaction = async (transactionId: string, updatedData: Omit<Transaction, 'id'>) => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .update(updatedData)
+      .eq('id', transactionId)
+      .select()
+      .single();
+
+    if (error) {
+        console.error('Error updating transaction:', error.message);
+    } else if (data) {
+        setTransactions(prev => 
+            prev.map(t => t.id === transactionId ? data : t)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        );
     }
   };
   
@@ -251,19 +354,30 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard properties={properties} transactions={transactions} />;
       case 'properties':
-        return <Properties properties={properties} addProperty={addProperty} deleteProperty={deleteProperty} onSelectProperty={handleSelectProperty} />;
+        return <Properties properties={properties} units={units} addProperty={addProperty} deleteProperty={deleteProperty} onSelectProperty={handleSelectProperty} />;
       case 'transactions':
-        return <TransactionsView transactions={transactions} addTransaction={addTransaction} deleteTransaction={deleteTransaction} properties={properties} />;
+        return <TransactionsView transactions={transactions} addTransaction={addTransaction} deleteTransaction={deleteTransaction} updateTransaction={updateTransaction} properties={properties} units={units} />;
       case 'tenants':
-        return <Tenants tenants={tenants} properties={properties} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
+        return <Tenants tenants={tenants} properties={properties} units={units} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
       case 'propertyDetail': {
         const property = properties.find(p => p.id === selectedPropertyId);
         if (!property) {
           handleBackToProperties();
           return null;
         }
+        const propertyUnits = units.filter(u => u.property_id === selectedPropertyId);
         const propertyTransactions = transactions.filter(t => t.property_id === selectedPropertyId);
-        return <PropertyDetail property={property} transactions={propertyTransactions} onBack={handleBackToProperties} onUpdateNotes={updatePropertyNotes} onUpdateProperty={updateProperty} />;
+        return <PropertyDetail 
+          property={property} 
+          units={propertyUnits} 
+          transactions={propertyTransactions} 
+          onBack={handleBackToProperties} 
+          onUpdateNotes={updatePropertyNotes} 
+          onUpdateProperty={updateProperty} 
+          addUnit={addUnit}
+          updateUnit={updateUnit}
+          deleteUnit={deleteUnit}
+        />;
       }
       case 'tenantDetail': {
         const tenant = tenants.find(t => t.id === selectedTenantId);
@@ -271,15 +385,21 @@ const App: React.FC = () => {
           handleBackToTenants();
           return null;
         }
-        const property = properties.find(p => p.id === tenant.property_id);
-        const propertyTransactions = transactions.filter(t => t.property_id === tenant.property_id);
+        const unit = units.find(u => u.id === tenant.unit_id);
+        const property = unit ? properties.find(p => p.id === unit.property_id) : undefined;
+        const propertyTransactions = tenant.unit_id ? transactions.filter(t => t.unit_id === tenant.unit_id) : [];
+
         return <TenantDetail 
             tenant={tenant} 
+            unit={unit}
             property={property} 
             transactions={propertyTransactions}
+            properties={properties}
+            units={units}
             onBack={handleBackToTenants} 
             onUpdateNotes={updateTenantNotes} 
             onUpdateTenant={updateTenant}
+            onUpdateTenantUnit={updateTenantUnit}
             onSelectProperty={handleSelectProperty}
             addTransaction={addTransaction} 
         />;
@@ -316,7 +436,7 @@ const App: React.FC = () => {
           {renderView()}
         </main>
       </div>
-      <AIAssistant properties={properties} transactions={transactions} tenants={tenants} />
+      <AIAssistant properties={properties} transactions={transactions} tenants={tenants} units={units} />
     </div>
   );
 };

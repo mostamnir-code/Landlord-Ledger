@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Tenant, Property, Transaction } from '../types';
+import type { Tenant, Property, Transaction, Unit } from '../types';
 import { TransactionType } from '../types';
+import { Modal } from './Modal';
 
 const ArrowLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -45,18 +46,65 @@ const UserIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const AssignPropertyForm: React.FC<{
+    onSave: (unitId: string | null) => void;
+    onClose: () => void;
+    properties: Property[];
+    units: Unit[];
+    currentUnitId: string | null;
+}> = ({ onSave, onClose, properties, units, currentUnitId }) => {
+    const [selectedUnitId, setSelectedUnitId] = useState<string | null>(currentUnitId);
+    const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p])), [properties]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave(selectedUnitId);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label htmlFor="unitId" className="block text-sm font-medium text-slate-700">Select a Unit</label>
+                <select 
+                    id="unitId" 
+                    value={selectedUnitId ?? ''} 
+                    onChange={(e) => setSelectedUnitId(e.target.value || null)} 
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                >
+                    <option value="">Unassigned</option>
+                    {properties.map(p => (
+                        <optgroup label={p.address} key={p.id}>
+                            {units.filter(u => u.property_id === p.id).map(u => (
+                                <option key={u.id} value={u.id}>{u.unit_number}</option>
+                            ))}
+                        </optgroup>
+                    ))}
+                </select>
+            </div>
+            <div className="flex justify-end pt-4 space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Save Assignment</button>
+            </div>
+        </form>
+    );
+};
+
 interface TenantDetailProps {
   tenant: Tenant;
+  unit?: Unit;
   property?: Property;
   transactions: Transaction[];
+  properties: Property[];
+  units: Unit[];
   onBack: () => void;
   onUpdateNotes: (tenantId: string, notes: string) => void;
-  onUpdateTenant: (tenantId: string, updatedInfo: Partial<Omit<Tenant, 'id' | 'property_id' | 'notes'>>) => void;
+  onUpdateTenant: (tenantId: string, updatedInfo: Partial<Omit<Tenant, 'id' | 'notes'>>) => void;
+  onUpdateTenantUnit: (tenantId: string, unitId: string | null) => void;
   onSelectProperty: (propertyId: string) => void;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
 }
 
-export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, transactions, onBack, onUpdateNotes, onUpdateTenant, onSelectProperty, addTransaction }) => {
+export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, unit, property, transactions, properties, units, onBack, onUpdateNotes, onUpdateTenant, onUpdateTenantUnit, onSelectProperty, addTransaction }) => {
     const [notes, setNotes] = useState(tenant.notes || '');
     const [isSaving, setIsSaving] = useState(false);
     
@@ -67,6 +115,8 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
 
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
     const [paymentAmount, setPaymentAmount] = useState('');
+
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
 
     useEffect(() => {
         setEditedName(tenant.name);
@@ -100,7 +150,7 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
     };
 
     const handleRecordPayment = () => {
-        if (!property || !paymentAmount || !paymentDate) {
+        if (!property || !unit || !paymentAmount || !paymentDate) {
             return;
         }
         const amount = parseFloat(paymentAmount);
@@ -111,9 +161,10 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
 
         const newTransaction: Omit<Transaction, 'id'> = {
             property_id: property.id,
+            unit_id: unit.id,
             type: TransactionType.INCOME,
             category: 'Rent',
-            description: 'Rent Payment',
+            description: `Rent - ${unit.unit_number}`,
             amount: amount,
             date: paymentDate
         };
@@ -125,12 +176,17 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
 
     const paymentHistory = useMemo(() => {
         return transactions
-            .filter(t => t.type === TransactionType.INCOME)
+            .filter(t => t.type === TransactionType.INCOME && t.unit_id === tenant.unit_id)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [transactions]);
+    }, [transactions, tenant.unit_id]);
     
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    };
+
+    const handleAssignUnit = (newUnitId: string | null) => {
+        onUpdateTenantUnit(tenant.id, newUnitId);
+        setIsAssignModalOpen(false);
     };
     
     return (
@@ -209,9 +265,12 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
                     )}
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold mb-4 text-slate-800">Lease Information</h2>
-                    {property ? (
+                <div className="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-slate-800">Lease Information</h2>
+                        <button onClick={() => setIsAssignModalOpen(true)} className="px-3 py-1 bg-slate-200 text-slate-800 rounded-md text-sm font-medium hover:bg-slate-300">{property ? 'Reassign' : 'Assign Unit'}</button>
+                    </div>
+                    {property && unit ? (
                          <div className="space-y-4">
                             <div className="flex items-center space-x-3">
                                 <HomeIcon className="w-6 h-6 text-primary-600" />
@@ -225,7 +284,7 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
                                         }}
                                         className="font-medium text-primary-600 hover:text-primary-800 hover:underline"
                                     >
-                                        {property.address}
+                                        {property.address}, {unit.unit_number}
                                     </a>
                                 </div>
                             </div>
@@ -233,20 +292,20 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
                                 <CurrencyDollarIcon className="w-6 h-6 text-primary-600" />
                                 <div>
                                     <p className="text-sm text-slate-500">Monthly Rent</p>
-                                    <p className="font-medium text-slate-800">${property.rent.toLocaleString()}</p>
+                                    <p className="font-medium text-slate-800">{formatCurrency(unit.rent)}</p>
                                 </div>
                             </div>
                             <div className="flex items-center space-x-3">
                                 <CalendarIcon className="w-6 h-6 text-primary-600" />
                                 <div>
                                     <p className="text-sm text-slate-500">Lease End</p>
-                                    <p className="font-medium text-slate-800">{new Date(property.lease_end).toLocaleDateString()}</p>
+                                    <p className="font-medium text-slate-800">{new Date(unit.lease_end).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-slate-500">This tenant is not currently assigned to a property.</p>
+                        <div className="flex-grow flex items-center justify-center">
+                            <p className="text-slate-500">This tenant is not currently assigned to a unit.</p>
                         </div>
                     )}
                 </div>
@@ -254,7 +313,7 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
 
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-bold mb-4 text-slate-800">Record Rent Payment</h2>
-                {property ? (
+                {property && unit ? (
                     <div className="flex flex-wrap items-end gap-4">
                         <div className="flex-1 min-w-[150px]">
                             <label htmlFor="payment-date" className="block text-sm font-medium text-slate-700">Payment Date</label>
@@ -277,7 +336,7 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
                                     id="payment-amount"
                                     value={paymentAmount}
                                     onChange={(e) => setPaymentAmount(e.target.value)}
-                                    placeholder="0.00"
+                                    placeholder={unit.rent.toString()}
                                     className="block w-full rounded-md border-slate-300 pl-7 pr-3 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                                 />
                             </div>
@@ -293,7 +352,7 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
                         </div>
                     </div>
                 ) : (
-                    <p className="text-slate-500 text-sm">A tenant must be assigned to a property before you can record payments.</p>
+                    <p className="text-slate-500 text-sm">A tenant must be assigned to a unit before you can record payments.</p>
                 )}
             </div>
 
@@ -349,6 +408,16 @@ export const TenantDetail: React.FC<TenantDetailProps> = ({ tenant, property, tr
                     </button>
                 </div>
             </div>
+
+            <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title={property ? "Reassign Tenant" : "Assign Tenant to Unit"}>
+                <AssignPropertyForm
+                    onSave={handleAssignUnit}
+                    onClose={() => setIsAssignModalOpen(false)}
+                    properties={properties}
+                    units={units}
+                    currentUnitId={tenant.unit_id}
+                />
+            </Modal>
         </div>
     );
 };
