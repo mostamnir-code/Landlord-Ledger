@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -13,7 +12,10 @@ import { Reminders } from './components/Reminders';
 import { Documents } from './components/Documents';
 import { AIAssistant } from './components/AIAssistant';
 import { Auth } from './components/Auth';
-import type { Property, Transaction, Tenant, Unit, Reminder, Document } from './types';
+import { OnlinePayments } from './components/OnlinePayments';
+import { Settings } from './components/Settings';
+import { BankSync } from './components/BankSync';
+import type { Property, Transaction, Tenant, Unit, Reminder, Document, PaymentSettings, BankConnection, SyncedTransaction } from './types';
 import { supabase } from './services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
@@ -43,6 +45,14 @@ const App: React.FC = () => {
   const [units, setUnits] = useState<Unit[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+
+  // State for Payment Gateway feature
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({ stripe_connected: false });
+  const [tenantOnlinePay, setTenantOnlinePay] = useState<Record<string, boolean>>({});
+
+  // State for Bank Sync feature
+  const [bankConnections, setBankConnections] = useState<BankConnection[]>([]);
+  const [syncedTransactions, setSyncedTransactions] = useState<SyncedTransaction[]>([]);
 
   useEffect(() => {
     const getSession = async () => {
@@ -472,6 +482,58 @@ const App: React.FC = () => {
     setActiveView(view);
   };
 
+  const handleConnectStripe = () => setPaymentSettings({ stripe_connected: true });
+  const handleDisconnectStripe = () => {
+    setPaymentSettings({ stripe_connected: false });
+    setTenantOnlinePay({}); // Also disable all tenants
+  };
+
+  const handleToggleTenantOnlinePay = (tenantId: string) => {
+      setTenantOnlinePay(prev => ({
+          ...prev,
+          [tenantId]: !prev[tenantId],
+      }));
+  };
+
+  const handleConnectBank = () => {
+    const newConnection: BankConnection = {
+        id: `conn_${Date.now()}`,
+        bank_name: 'First National Bank (Demo)',
+        account_name: 'Business Checking',
+        last_four: Math.floor(1000 + Math.random() * 9000).toString(),
+    };
+    setBankConnections(prev => [...prev, newConnection]);
+  };
+
+  const handleSyncTransactions = (connectionId: string) => {
+      console.log(`Syncing transactions for ${connectionId}`);
+      const mockTransactions: SyncedTransaction[] = [
+          { id: `sync_${Date.now()}_1`, date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0], description: 'HOME DEPOT #1234', amount: 125.43, is_debit: true },
+          { id: `sync_${Date.now()}_2`, date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0], description: 'ZELLE PAYMENT FROM JANE DOE', amount: 1800, is_debit: false },
+          { id: `sync_${Date.now()}_3`, date: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], description: 'PG&E UTILITIES', amount: 88.12, is_debit: true },
+          { id: `sync_${Date.now()}_4`, date: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0], description: 'STARBUCKS', amount: 5.75, is_debit: true },
+          { id: `sync_${Date.now()}_5`, date: new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0], description: 'STRIPE TRANSFER', amount: 3550, is_debit: false },
+      ];
+
+      setSyncedTransactions(prev => {
+          const existingDescriptions = new Set(prev.map(t => t.description));
+          const newTxs = mockTransactions.filter(t => !existingDescriptions.has(t.description));
+          return [...prev, ...newTxs].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      });
+  };
+
+  const handleImportSyncedTransactions = (transactionsToImport: (Omit<Transaction, 'id'> & { sync_id: string })[]) => {
+      const importPromises = transactionsToImport.map(txData => {
+          const { sync_id, ...transaction } = txData;
+          return addTransaction(transaction);
+      });
+      
+      Promise.all(importPromises).then(() => {
+        const importedIds = new Set(transactionsToImport.map(t => t.sync_id));
+        setSyncedTransactions(prev => prev.filter(t => !importedIds.has(t.id)));
+      });
+  };
+
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -481,9 +543,30 @@ const App: React.FC = () => {
       case 'transactions':
         return <TransactionsView transactions={transactions} addTransaction={addTransaction} deleteTransaction={deleteTransaction} updateTransaction={updateTransaction} properties={properties} units={units} />;
       case 'tenants':
-        return <Tenants tenants={tenants} properties={properties} units={units} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
+        return <Tenants tenants={tenants} properties={properties} units={units} transactions={transactions} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
       case 'reminders':
         return <Reminders tenants={tenants} units={units} properties={properties} transactions={transactions} reminders={reminders} upsertReminder={upsertReminder} />;
+      case 'onlinePayments':
+        return <OnlinePayments 
+            tenants={tenants}
+            units={units}
+            properties={properties}
+            transactions={transactions}
+            paymentSettings={paymentSettings}
+            tenantOnlinePay={tenantOnlinePay}
+            onNavigate={handleNavigate}
+            addTransaction={addTransaction}
+        />;
+      case 'bankSync':
+        return <BankSync
+            properties={properties}
+            units={units}
+            bankConnections={bankConnections}
+            syncedTransactions={syncedTransactions}
+            onConnectBank={handleConnectBank}
+            onSyncTransactions={handleSyncTransactions}
+            onImportTransactions={handleImportSyncedTransactions}
+        />;
       case 'documents':
         return <Documents 
           documents={documents}
@@ -493,6 +576,12 @@ const App: React.FC = () => {
           onUpload={uploadDocument}
           onDelete={deleteDocument}
           onDownload={downloadDocument}
+        />;
+       case 'settings':
+        return <Settings 
+            isStripeConnected={paymentSettings.stripe_connected}
+            onConnectStripe={handleConnectStripe}
+            onDisconnectStripe={handleDisconnectStripe}
         />;
       case 'propertyDetail': {
         const property = properties.find(p => p.id === selectedPropertyId);
@@ -547,6 +636,9 @@ const App: React.FC = () => {
             onUploadDocument={uploadDocument}
             onDeleteDocument={deleteDocument}
             onDownloadDocument={downloadDocument}
+            isStripeConnected={paymentSettings.stripe_connected}
+            onlinePayEnabled={!!tenantOnlinePay[tenant.id]}
+            onToggleOnlinePay={handleToggleTenantOnlinePay}
         />;
       }
       default:

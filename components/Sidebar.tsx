@@ -37,6 +37,25 @@ const DocumentDuplicateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
     </svg>
 );
 
+const CreditCardIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15A2.25 2.25 0 002.25 6.75v10.5A2.25 2.25 0 004.5 21z" />
+    </svg>
+);
+
+const Cog6ToothIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-1.008 1.11-1.226.55-.218 1.19-.218 1.74 0 .55.218 1.02.684 1.11 1.226l.094.552c.295.172.57.385.824.64l.44-.222a1.875 1.875 0 012.148 0l.44.222c.254.254.45.568.64.88l.142.472c.11.368.11.768 0 1.136l-.142.472c-.19.312-.386.626-.64.88l-.44.222a1.875 1.875 0 01-2.148 0l-.44-.222a4.475 4.475 0 00-.824.64l-.094.552c-.09.542-.56 1.008-1.11 1.226-.55.218-1.19.218-1.74 0-.55-.218-1.02-.684-1.11-1.226l-.094-.552a4.475 4.475 0 00-.824-.64l-.44.222a1.875 1.875 0 01-2.148 0l-.44-.222a5.207 5.207 0 01-.64-.88l-.142-.472c-.11-.368-.11-.768 0-1.136l.142-.472c.19-.312.386.626.64-.88l.44.222a1.875 1.875 0 012.148 0l.44.222c.254-.254.45-.568.64-.88l.094-.552zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+const BuildingLibraryIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+    </svg>
+);
+
+
 interface SidebarProps {
   activeView: string;
   setActiveView: (view: string) => void;
@@ -63,8 +82,8 @@ const NavItem: React.FC<{
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
   return (
-    <aside className="w-64 bg-white p-4 border-r border-slate-200 hidden md:block">
-      <nav className="space-y-2">
+    <aside className="w-64 bg-white p-4 border-r border-slate-200 hidden md:flex md:flex-col">
+      <nav className="space-y-2 flex-grow">
         <NavItem
           icon={<ChartPieIcon className="w-6 h-6" />}
           label="Dashboard"
@@ -89,6 +108,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) =
           isActive={activeView === 'tenants'}
           onClick={() => setActiveView('tenants')}
         />
+         <NavItem
+          icon={<CreditCardIcon className="w-6 h-6" />}
+          label="Online Payments"
+          isActive={activeView === 'onlinePayments'}
+          onClick={() => setActiveView('onlinePayments')}
+        />
+        <NavItem
+          icon={<BuildingLibraryIcon className="w-6 h-6" />}
+          label="Bank Sync"
+          isActive={activeView === 'bankSync'}
+          onClick={() => setActiveView('bankSync')}
+        />
         <NavItem
           icon={<BellIcon className="w-6 h-6" />}
           label="Reminders"
@@ -102,6 +133,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) =
           onClick={() => setActiveView('documents')}
         />
       </nav>
+      <div className="mt-auto">
+        <NavItem
+            icon={<Cog6ToothIcon className="w-6 h-6" />}
+            label="Settings"
+            isActive={activeView === 'settings'}
+            onClick={() => setActiveView('settings')}
+        />
+      </div>
     </aside>
   );
 };

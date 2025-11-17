@@ -65,3 +65,22 @@ export interface Document {
   document_type: string;
   description: string | null;
 }
+
+export interface PaymentSettings {
+  stripe_connected: boolean;
+}
+
+export interface BankConnection {
+  id: string;
+  bank_name: string;
+  account_name: string;
+  last_four: string;
+}
+
+export interface SyncedTransaction {
+  id: string; // A temporary ID for the UI
+  date: string;
+  description: string;
+  amount: number;
+  is_debit: boolean; // true for expenses, false for income
+}

@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import type { Tenant, Property, Unit } from '../types';
+import type { Tenant, Property, Unit, Transaction } from '../types';
 import { Modal } from './Modal';
+import { TransactionType } from '../types';
 
 const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -34,6 +35,19 @@ const EmptyTenantsIllustration: React.FC<React.SVGProps<SVGSVGElement>> = (props
         <path d="M21 73.5V24.5L10.5 7h63L63 24.5v49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"/>
     </svg>
 );
+
+const CheckCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+);
+
+const ExclamationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+);
+
+const ClockIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+);
+
 
 const AddTenantForm: React.FC<{ 
     onAdd: (tenant: Omit<Tenant, 'id' | 'notes'>) => void; 
@@ -89,36 +103,52 @@ const AddTenantForm: React.FC<{
     );
 };
 
-const TenantCard: React.FC<{ tenant: Tenant; unit: Unit | undefined; property: Property | undefined; onSelect: () => void; }> = ({ tenant, unit, property, onSelect }) => (
-    <div onClick={onSelect} className="bg-white p-6 rounded-lg shadow-md border border-slate-200 hover:shadow-lg transition-shadow flex flex-col cursor-pointer">
-      <h3 className="text-lg font-bold text-primary-700">{tenant.name}</h3>
-      <p className={`text-sm ${property ? 'text-slate-500' : 'text-amber-600'}`}>
-          {property ? `${property.address}, ${unit?.unit_number}` : 'Unassigned'}
-      </p>
-      
-      <div className="mt-4 pt-4 border-t border-slate-200 space-y-2 text-sm text-slate-600 flex-grow">
-        <div className="flex items-center space-x-2">
-          <AtSymbolIcon className="w-4 h-4 text-slate-400" />
-          <a href={`mailto:${tenant.email}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary-600">{tenant.email}</a>
+const TenantCard: React.FC<{ tenant: Tenant; unit: Unit | undefined; property: Property | undefined; onSelect: () => void; rentStatus: 'paid' | 'overdue' | 'pending' | 'none'; }> = ({ tenant, unit, property, onSelect, rentStatus }) => {
+    
+    const statusIcon = {
+        paid: <CheckCircleIcon className="w-5 h-5 text-green-500" title="Rent Paid for Current Month" />,
+        overdue: <ExclamationCircleIcon className="w-5 h-5 text-red-500" title="Rent Overdue" />,
+        pending: <ClockIcon className="w-5 h-5 text-amber-500" title="Awaiting Payment" />,
+        none: null
+    }[rentStatus];
+    
+    return (
+        <div onClick={onSelect} className="bg-white p-6 rounded-lg shadow-md border border-slate-200 hover:shadow-lg transition-shadow flex flex-col cursor-pointer">
+          <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-primary-700">{tenant.name}</h3>
+                   {statusIcon}
+              </div>
+          </div>
+          <p className={`text-sm ${property ? 'text-slate-500' : 'text-amber-600'}`}>
+              {property ? `${property.address}, ${unit?.unit_number}` : 'Unassigned'}
+          </p>
+          
+          <div className="mt-4 pt-4 border-t border-slate-200 space-y-2 text-sm text-slate-600 flex-grow">
+            <div className="flex items-center space-x-2">
+              <AtSymbolIcon className="w-4 h-4 text-slate-400" />
+              <a href={`mailto:${tenant.email}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary-600">{tenant.email}</a>
+            </div>
+            <div className="flex items-center space-x-2">
+              <PhoneIcon className="w-4 h-4 text-slate-400" />
+              <a href={`tel:${tenant.phone}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary-600">{tenant.phone}</a>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <PhoneIcon className="w-4 h-4 text-slate-400" />
-          <a href={`tel:${tenant.phone}`} onClick={(e) => e.stopPropagation()} className="hover:text-primary-600">{tenant.phone}</a>
-        </div>
-      </div>
-    </div>
-);
+    );
+};
 
 
 interface TenantsProps {
   tenants: Tenant[];
   properties: Property[];
   units: Unit[];
+  transactions: Transaction[];
   onSelectTenant: (tenantId: string) => void;
   addTenant: (tenant: Omit<Tenant, 'id' | 'notes'>) => Promise<void>;
 }
 
-export const Tenants: React.FC<TenantsProps> = ({ tenants, properties, units, onSelectTenant, addTenant }) => {
+export const Tenants: React.FC<TenantsProps> = ({ tenants, properties, units, transactions, onSelectTenant, addTenant }) => {
     const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p])), [properties]);
     const unitMap = useMemo(() => new Map(units.map(u => [u.id, u])), [units]);
 
@@ -224,6 +254,38 @@ export const Tenants: React.FC<TenantsProps> = ({ tenants, properties, units, on
         }
     };
 
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    const tenantRentStatus = useMemo(() => {
+        const statusMap: Record<string, 'paid' | 'overdue' | 'pending' | 'none'> = {};
+        tenants.forEach(tenant => {
+            if (!tenant.unit_id) {
+                statusMap[tenant.id] = 'none';
+                return;
+            }
+            const unit = unitMap.get(tenant.unit_id);
+            if (!unit) {
+                statusMap[tenant.id] = 'none';
+                return;
+            }
+
+            const rentPaid = transactions
+                .filter(t => t.unit_id === tenant.unit_id && t.type === TransactionType.INCOME && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            if (rentPaid >= unit.rent) {
+                statusMap[tenant.id] = 'paid';
+            } else if (today.getDate() > 5 && rentPaid < unit.rent) {
+                statusMap[tenant.id] = 'overdue';
+            } else {
+                statusMap[tenant.id] = 'pending';
+            }
+        });
+        return statusMap;
+    }, [tenants, units, transactions, unitMap, currentMonth, currentYear, today]);
+
     const filteredTenants = useMemo(() => {
         let tenantsToFilter = tenants;
 
@@ -322,6 +384,7 @@ export const Tenants: React.FC<TenantsProps> = ({ tenants, properties, units, on
                                 tenant={tenant}
                                 unit={unit}
                                 property={property}
+                                rentStatus={tenantRentStatus[tenant.id] || 'none'}
                                 onSelect={() => onSelectTenant(tenant.id)}
                             />
                         );
