@@ -71,10 +71,11 @@ export interface PaymentSettings {
 }
 
 export interface BankConnection {
-  id: string;
-  bank_name: string;
-  account_name: string;
-  last_four: string;
+  id: string; // Unique ID for the connection in our system
+  provider: 'plaid' | 'saltedge';
+  institution_name: string;
+  access_token?: string; // Plaid specific
+  connection_id?: string; // Salt Edge specific
 }
 
 export interface SyncedTransaction {
@@ -83,4 +84,16 @@ export interface SyncedTransaction {
   description: string;
   amount: number;
   is_debit: boolean; // true for expenses, false for income
+}
+
+export interface RecurringTransaction {
+  id: string;
+  property_id: string;
+  unit_id: string | null;
+  type: TransactionType;
+  description: string;
+  amount: number;
+  category: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  start_date: string;
 }

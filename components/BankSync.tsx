@@ -3,6 +3,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import type { BankConnection, SyncedTransaction, Property, Unit, Transaction } from '../types';
 import { TransactionType, DefaultIncomeCategories, DefaultExpenseCategories } from '../types';
 import { Modal } from './Modal';
+import * as plaidClient from '../services/plaidClient';
+import * as saltEdgeClient from '../services/saltEdgeClient';
+
+// Declare Plaid and Salt Edge globals from their CDN scripts
+declare const Plaid: any;
+declare const SaltEdgeConnect: any;
 
 // Icons
 const BuildingLibraryIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -13,6 +19,11 @@ const BuildingLibraryIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
 const ArrowPathIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.181-3.183m-11.664 0l4.992-4.993m-4.993 0l-3.181 3.183A8.25 8.25 0 004.5 16.5l3.182-3.182" />
+    </svg>
+);
+const GlobeAmericasIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.115 5.19l.319 1.913A6 6 0 008.11 10.36L9.75 12l-.387 .775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.473.236 1.05.038 1.286-.431l.431-.862df.714-1.428a1.5 1.5 0 00-2.65-1.06l-1.899 1.899a1.5 1.5 0 01-2.121 0l-1.414-1.414a1.5 1.5 0 010-2.121l1.899-1.899a1.5 1.5 0 001.06-2.65l-1.428-.714a6 6 0 00-2.172-2.172L6.115 5.19z" />
     </svg>
 );
 
@@ -29,8 +40,8 @@ interface BankSyncProps {
     units: Unit[];
     bankConnections: BankConnection[];
     syncedTransactions: SyncedTransaction[];
-    onConnectBank: () => void;
-    onSyncTransactions: (connectionId: string) => void;
+    onAddConnection: (connection: BankConnection) => void;
+    onSyncTransactions: (connection: BankConnection) => void;
     onImportTransactions: (transactions: (Omit<Transaction, 'id'> & { sync_id: string })[]) => void;
 }
 
@@ -40,23 +51,37 @@ const categorySuggestions = [
     { keywords: ['utility', 'electric', 'water', 'gas', 'internet', 'sewage', 'bill', 'pg&e'], category: 'Utilities', type: TransactionType.EXPENSE },
     { keywords: ['tax', 'property tax'], category: 'Property Tax', type: TransactionType.EXPENSE },
     { keywords: ['insurance', 'premium'], category: 'Insurance', type: TransactionType.EXPENSE },
+    { keywords: ['tesco', 'waitrose', 'lidl'], category: 'Supplies', type: TransactionType.EXPENSE },
     // Income
-    { keywords: ['rent', 'zelle', 'payment from'], category: 'Rent', type: TransactionType.INCOME },
+    { keywords: ['rent', 'zelle', 'payment from', 'revolut transfer'], category: 'Rent', type: TransactionType.INCOME },
     { keywords: ['deposit', 'stripe transfer'], category: 'Other', type: TransactionType.INCOME },
 ];
 
 
-const ConnectBankModal: React.FC<{onClose: () => void; onConnect: () => void}> = ({onClose, onConnect}) => {
+const ProviderSelectionModal: React.FC<{onClose: () => void; onSelect: (provider: 'plaid' | 'saltedge') => void}> = ({onClose, onSelect}) => {
     return (
-        <Modal isOpen={true} onClose={onClose} title="Connect Bank Account (Simulation)">
-            <div className="text-center space-y-4">
-                <p className="text-slate-600">In a real application, this would use a service like Plaid to securely connect your bank account.</p>
-                <p className="font-semibold text-slate-800">For this demo, we'll connect a sample bank account with mock data.</p>
+        <Modal isOpen={true} onClose={onClose} title="Connect Bank Account">
+             <div className="space-y-4">
+                <p className="text-center text-slate-600">Please select your bank's region to continue.</p>
                 <button
-                    onClick={() => { onConnect(); onClose(); }}
-                    className="w-full px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold"
+                    onClick={() => onSelect('plaid')}
+                    className="w-full flex items-center gap-4 p-4 border border-slate-300 rounded-lg hover:bg-slate-50 text-left"
                 >
-                    Connect Sample Account
+                    <img src="https://cdn.plaid.com/brand/logo-blue.svg" alt="Plaid" className="h-8 w-auto"/>
+                    <div>
+                        <p className="font-semibold text-slate-800">United States</p>
+                        <p className="text-sm text-slate-500">Powered by Plaid</p>
+                    </div>
+                </button>
+                 <button
+                    onClick={() => onSelect('saltedge')}
+                    className="w-full flex items-center gap-4 p-4 border border-slate-300 rounded-lg hover:bg-slate-50 text-left"
+                >
+                    <img src="https://www.saltedge.com/images/logo_se.svg" alt="Salt Edge" className="h-8 w-auto"/>
+                    <div>
+                        <p className="font-semibold text-slate-800">International</p>
+                        <p className="text-sm text-slate-500">Powered by Salt Edge</p>
+                    </div>
                 </button>
             </div>
         </Modal>
@@ -88,6 +113,8 @@ const TransactionReviewRow: React.FC<{
                 return;
             }
         }
+        // Fallback if no keywords match
+        setCategory('');
     }, [transaction.description]);
 
     useEffect(() => {
@@ -139,11 +166,76 @@ const TransactionReviewRow: React.FC<{
     );
 }
 
-export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConnections, syncedTransactions, onConnectBank, onSyncTransactions, onImportTransactions }) => {
-    const [isConnecting, setIsConnecting] = useState(false);
+export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConnections, syncedTransactions, onAddConnection, onSyncTransactions, onImportTransactions }) => {
+    const [isProviderSelectionOpen, setIsProviderSelectionOpen] = useState(false);
     const [isSyncing, setIsSyncing] = useState<string | null>(null);
     const [reviewedTxs, setReviewedTxs] = useState<Record<string, Partial<ReviewedTransaction>>>({});
     const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set());
+
+    const handlePlaidSuccess = async (public_token: string, metadata: any) => {
+        try {
+            const { access_token } = await plaidClient.exchangePublicToken(public_token);
+            const newConnection: BankConnection = {
+                id: `plaid_${Date.now()}`,
+                provider: 'plaid',
+                institution_name: metadata.institution.name,
+                access_token: access_token,
+            };
+            onAddConnection(newConnection);
+        } catch (error) {
+            console.error("Plaid token exchange failed:", error);
+            alert("There was an error connecting your account via Plaid. Please try again.");
+        }
+    };
+
+    const handlePlaidConnect = async () => {
+        try {
+            const { link_token } = await plaidClient.createLinkToken();
+            const handler = Plaid.create({
+                token: link_token,
+                onSuccess: handlePlaidSuccess,
+            });
+            handler.open();
+        } catch (error) {
+            console.error("Could not create Plaid link token:", error);
+            alert("Could not initialize Plaid connection. Please try again later.");
+        }
+    };
+
+    const handleSaltEdgeConnect = async () => {
+        try {
+            const { connect_token } = await saltEdgeClient.createConnectToken();
+            const connect = new SaltEdgeConnect({
+                token: connect_token,
+                onSuccess: (data: any) => {
+                    const newConnection: BankConnection = {
+                        id: `se_${data.connection_id}`,
+                        provider: 'saltedge',
+                        institution_name: data.provider_name,
+                        connection_id: data.connection_id,
+                    };
+                    onAddConnection(newConnection);
+                },
+                onError: (error: any) => {
+                    console.error("Salt Edge connection error:", error);
+                    alert(`An error occurred with Salt Edge: ${error.error_message || 'Please try again.'}`);
+                }
+            });
+            connect.show();
+        } catch (error) {
+            console.error("Could not create Salt Edge connect token:", error);
+            alert("Could not initialize Salt Edge connection. Please try again later.");
+        }
+    };
+    
+    const handleProviderSelect = (provider: 'plaid' | 'saltedge') => {
+        setIsProviderSelectionOpen(false);
+        if (provider === 'plaid') {
+            handlePlaidConnect();
+        } else {
+            handleSaltEdgeConnect();
+        }
+    };
 
     const handleUpdateReview = (txId: string, updates: Partial<ReviewedTransaction>) => {
         setReviewedTxs(prev => ({ ...prev, [txId]: { ...(prev[txId] || {}), ...updates } }));
@@ -196,10 +288,10 @@ export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConne
         }
     };
 
-    const handleSync = (connectionId: string) => {
-        setIsSyncing(connectionId);
+    const handleSync = (connection: BankConnection) => {
+        setIsSyncing(connection.id);
         setTimeout(() => {
-            onSyncTransactions(connectionId);
+            onSyncTransactions(connection);
             setIsSyncing(null);
         }, 1500);
     };
@@ -214,7 +306,7 @@ export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConne
                         <h2 className="text-xl font-bold text-slate-800">Connected Accounts</h2>
                         <p className="text-slate-500 text-sm">Sync transactions from your bank to easily track income and expenses.</p>
                     </div>
-                    <button onClick={() => setIsConnecting(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold text-sm">Connect Account</button>
+                    <button onClick={() => setIsProviderSelectionOpen(true)} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-semibold text-sm">Connect Account</button>
                 </div>
                 <div className="mt-6 space-y-4">
                     {bankConnections.length > 0 ? (
@@ -223,11 +315,11 @@ export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConne
                                 <div className="flex items-center gap-4">
                                     <div className="bg-slate-100 p-3 rounded-md"><BuildingLibraryIcon className="w-6 h-6 text-primary-600"/></div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">{conn.bank_name}</h3>
-                                        <p className="text-sm text-slate-500">{conn.account_name} (...{conn.last_four})</p>
+                                        <h3 className="font-bold text-slate-800">{conn.institution_name}</h3>
+                                        <p className="text-xs text-slate-500 uppercase font-semibold">{conn.provider}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => handleSync(conn.id)} disabled={!!isSyncing} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 font-semibold text-sm disabled:opacity-50">
+                                <button onClick={() => handleSync(conn)} disabled={!!isSyncing} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 font-semibold text-sm disabled:opacity-50">
                                     <ArrowPathIcon className={`w-5 h-5 ${isSyncing === conn.id ? 'animate-spin' : ''}`}/>
                                     {isSyncing === conn.id ? 'Syncing...' : 'Sync Now'}
                                 </button>
@@ -275,7 +367,7 @@ export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConne
                 </div>
             )}
             
-            {isConnecting && <ConnectBankModal onClose={() => setIsConnecting(false)} onConnect={onConnectBank}/>}
+            {isProviderSelectionOpen && <ProviderSelectionModal onClose={() => setIsProviderSelectionOpen(false)} onSelect={handleProviderSelect}/>}
         </div>
     );
 }

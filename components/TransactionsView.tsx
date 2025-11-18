@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { Property, Transaction, Unit } from '../types';
+import type { Property, Transaction, Unit, RecurringTransaction } from '../types';
 import { TransactionType, DefaultIncomeCategories, DefaultExpenseCategories } from '../types';
 import { Modal } from './Modal';
 import { ConfirmModal } from './ConfirmModal';
@@ -26,6 +26,12 @@ const PencilIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 const ArrowDownTrayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+);
+
+const ClockCounterClockwiseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5" />
     </svg>
 );
 
@@ -247,20 +253,157 @@ interface TransactionsViewProps {
   updateTransaction: (transactionId: string, data: Omit<Transaction, 'id'>) => void;
   properties: Property[];
   units: Unit[];
+  recurringTransactions: RecurringTransaction[];
+  addRecurringTransaction: (transaction: Omit<RecurringTransaction, 'id'>) => Promise<void>;
+  updateRecurringTransaction: (id: string, data: Partial<Omit<RecurringTransaction, 'id'>>) => Promise<void>;
+  deleteRecurringTransaction: (id: string) => Promise<void>;
 }
 
-export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions, addTransaction, deleteTransaction, updateTransaction, properties, units }) => {
+const RecurringTransactionForm: React.FC<{
+    onSave: (data: Omit<RecurringTransaction, 'id'>) => void;
+    onClose: () => void;
+    properties: Property[];
+    units: Unit[];
+    initialData?: RecurringTransaction | null;
+}> = ({ onSave, onClose, properties, units, initialData }) => {
+    const [propertyId, setPropertyId] = useState(initialData?.property_id || properties[0]?.id || '');
+    const [unitId, setUnitId] = useState<string | null>(initialData?.unit_id || null);
+    const [type, setType] = useState<TransactionType>(initialData?.type || TransactionType.INCOME);
+    const [category, setCategory] = useState(initialData?.category || DefaultIncomeCategories[0]);
+    const [description, setDescription] = useState(initialData?.description || '');
+    const [amount, setAmount] = useState(initialData?.amount.toString() || '');
+    const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(initialData?.frequency || 'monthly');
+    const [startDate, setStartDate] = useState(initialData?.start_date || new Date().toISOString().split('T')[0]);
+    
+    const availableUnits = useMemo(() => units.filter(u => u.property_id === propertyId), [units, propertyId]);
+    const availableCategories = useMemo(() => type === TransactionType.INCOME ? DefaultIncomeCategories : DefaultExpenseCategories, [type]);
+
+    useEffect(() => {
+        setUnitId(initialData?.property_id === propertyId ? initialData?.unit_id : null);
+    }, [propertyId, initialData]);
+
+    useEffect(() => {
+        if (!initialData || type !== initialData.type) {
+            setCategory(availableCategories[0]);
+        }
+    }, [type, initialData, availableCategories]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const parsedAmount = parseFloat(amount);
+        if (!description || isNaN(parsedAmount) || parsedAmount <= 0 || !propertyId || !startDate) {
+            alert("Please fill in all required fields with valid values.");
+            return;
+        }
+        onSave({
+            property_id: propertyId,
+            unit_id: unitId,
+            type,
+            category,
+            description,
+            amount: parsedAmount,
+            frequency,
+            start_date: startDate,
+        });
+        onClose();
+    };
+    
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Property</label>
+                    <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        {properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Unit (Optional)</label>
+                    <select value={unitId ?? ''} onChange={(e) => setUnitId(e.target.value || null)} disabled={!propertyId || availableUnits.length === 0} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-slate-50">
+                        <option value="">Property-wide</option>
+                        {availableUnits.map(u => <option key={u.id} value={u.id}>{u.unit_number}</option>)}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-slate-700">Description</label>
+                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Type</label>
+                    <select value={type} onChange={(e) => setType(e.target.value as TransactionType)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        <option value={TransactionType.INCOME}>Income</option>
+                        <option value={TransactionType.EXPENSE}>Expense</option>
+                    </select>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700">Category</label>
+                    <select value={category} onChange={(e) => setCategory(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Amount</label>
+                    <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Frequency</label>
+                    <select value={frequency} onChange={(e) => setFrequency(e.target.value as any)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700">Start Date</label>
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+                </div>
+            </div>
+            <div className="flex justify-end pt-4 space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{initialData ? 'Save Changes' : 'Add Rule'}</button>
+            </div>
+        </form>
+    )
+}
+
+export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions, addTransaction, deleteTransaction, updateTransaction, properties, units, recurringTransactions, addRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' }>({ key: 'date', direction: 'descending' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [recurringToEdit, setRecurringToEdit] = useState<RecurringTransaction | null>(null);
+  const [recurringToDelete, setRecurringToDelete] = useState<RecurringTransaction | null>(null);
+  const [recurringFormOpen, setRecurringFormOpen] = useState(false);
 
   const propertyMap = useMemo(() => new Map(properties.map(p => [p.id, p.address])), [properties]);
   const unitMap = useMemo(() => new Map(units.map(u => [u.id, u.unit_number])), [units]);
 
   const sortedTransactions = useMemo(() => {
     const filteredItems = transactions.filter(t => {
+      // Type filter
+      if (filterType !== 'ALL' && t.type !== filterType) {
+          return false;
+      }
+
+      // Date range filter
+      if (startDate && t.date < startDate) {
+          return false;
+      }
+      if (endDate && t.date > endDate) {
+          return false;
+      }
+      
       const propertyAddress = propertyMap.get(t.property_id) || '';
       const unitNumber = t.unit_id ? unitMap.get(t.unit_id) || '' : '';
       const fullAddress = `${propertyAddress} ${unitNumber}`.trim();
@@ -311,7 +454,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
     });
 
     return sortableItems;
-}, [transactions, sortConfig, propertyMap, unitMap, searchTerm]);
+}, [transactions, sortConfig, propertyMap, unitMap, searchTerm, filterType, startDate, endDate]);
 
   const requestSort = (key: SortKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -364,6 +507,27 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
     document.body.removeChild(link);
   };
 
+  const calculateNextDueDate = (rt: RecurringTransaction) => {
+    const startDate = new Date(rt.start_date + 'T00:00:00'); // Ensure we use local timezone
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (startDate > today) {
+        return startDate.toLocaleDateString();
+    }
+
+    let nextDate = new Date(startDate);
+    while (nextDate < today) {
+        switch (rt.frequency) {
+            case 'daily': nextDate.setDate(nextDate.getDate() + 1); break;
+            case 'weekly': nextDate.setDate(nextDate.getDate() + 7); break;
+            case 'monthly': nextDate.setMonth(nextDate.getMonth() + 1); break;
+            case 'yearly': nextDate.setFullYear(nextDate.getFullYear() + 1); break;
+        }
+    }
+    return nextDate.toLocaleDateString();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
@@ -375,6 +539,13 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
             >
                 <ArrowDownTrayIcon className="w-5 h-5" />
                 <span>Export CSV</span>
+            </button>
+             <button
+                onClick={() => setIsRecurringModalOpen(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+            >
+                <ClockCounterClockwiseIcon className="w-5 h-5" />
+                <span>Recurring</span>
             </button>
             <button 
                 onClick={() => setIsAddModalOpen(true)} 
@@ -390,14 +561,51 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
 
       {transactions.length > 0 ? (
         <>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <input
-              type="text"
-              placeholder="Search transactions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full max-w-sm px-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-wrap items-end gap-4">
+            <div className="flex-grow">
+              <label htmlFor="search" className="block text-sm font-medium text-slate-700">Search</label>
+              <input
+                  id="search"
+                  type="text"
+                  placeholder="Description, category, address..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mt-1 w-full max-w-xs px-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="type-filter" className="block text-sm font-medium text-slate-700">Type</label>
+              <select
+                id="type-filter"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              >
+                <option value="ALL">All Types</option>
+                <option value={TransactionType.INCOME}>Income</option>
+                <option value={TransactionType.EXPENSE}>Expense</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="start-date" className="block text-sm font-medium text-slate-700">Start Date</label>
+              <input
+                type="date"
+                id="start-date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="end-date" className="block text-sm font-medium text-slate-700">End Date</label>
+              <input
+                type="date"
+                id="end-date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              />
+            </div>
         </div>
         <div className="overflow-x-auto bg-white rounded-lg shadow-md">
             <table className="min-w-full divide-y divide-slate-200">
@@ -506,6 +714,76 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
       >
         Are you sure you want to delete this transaction? This action cannot be undone.
       </ConfirmModal>
+      
+      <Modal isOpen={isRecurringModalOpen} onClose={() => { setIsRecurringModalOpen(false); setRecurringFormOpen(false); setRecurringToEdit(null); }} title={recurringFormOpen ? (recurringToEdit ? "Edit Recurring Transaction" : "Add Recurring Transaction") : "Recurring Transactions"}>
+         {recurringFormOpen ? (
+            <RecurringTransactionForm 
+                onSave={(data) => {
+                    if (recurringToEdit) {
+                        updateRecurringTransaction(recurringToEdit.id, data);
+                    } else {
+                        addRecurringTransaction(data);
+                    }
+                }}
+                onClose={() => { setRecurringFormOpen(false); setRecurringToEdit(null); }}
+                properties={properties}
+                units={units}
+                initialData={recurringToEdit}
+            />
+         ) : (
+            <div className="space-y-4">
+                <div className="overflow-y-auto max-h-96">
+                    {recurringTransactions.length > 0 ? (
+                    <table className="min-w-full">
+                        <thead className="sticky top-0 bg-white">
+                            <tr>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Description</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Amount</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Frequency</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Next Due</th>
+                                <th className="py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                            {recurringTransactions.map(rt => (
+                                <tr key={rt.id}>
+                                    <td className="py-3 pr-2 text-sm font-medium text-slate-800">{rt.description}</td>
+                                    <td className={`py-3 pr-2 text-sm ${rt.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(rt.amount)}</td>
+                                    <td className="py-3 pr-2 text-sm text-slate-500 capitalize">{rt.frequency}</td>
+                                    <td className="py-3 pr-2 text-sm text-slate-500">{calculateNextDueDate(rt)}</td>
+                                    <td className="py-3 text-right">
+                                        <button onClick={() => { setRecurringToEdit(rt); setRecurringFormOpen(true); }} className="p-1 text-primary-600 hover:text-primary-800"><PencilIcon className="w-4 h-4"/></button>
+                                        <button onClick={() => setRecurringToDelete(rt)} className="p-1 text-red-600 hover:text-red-800"><TrashIcon className="w-4 h-4"/></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                     ) : (
+                        <p className="text-center text-slate-500 py-8">No recurring transactions have been set up yet.</p>
+                     )}
+                </div>
+                <div className="flex justify-end pt-4">
+                    <button onClick={() => { setRecurringToEdit(null); setRecurringFormOpen(true); }} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Add New</button>
+                </div>
+            </div>
+         )}
+      </Modal>
+
+       <ConfirmModal
+        isOpen={!!recurringToDelete}
+        onClose={() => setRecurringToDelete(null)}
+        onConfirm={() => {
+            if (recurringToDelete) {
+                deleteRecurringTransaction(recurringToDelete.id);
+                setRecurringToDelete(null);
+            }
+        }}
+        title="Delete Recurring Transaction?"
+      >
+        Are you sure you want to delete this recurring transaction rule? This action cannot be undone.
+      </ConfirmModal>
+
     </div>
   );
 };

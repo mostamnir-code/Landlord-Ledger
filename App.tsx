@@ -15,8 +15,10 @@ import { Auth } from './components/Auth';
 import { OnlinePayments } from './components/OnlinePayments';
 import { Settings } from './components/Settings';
 import { BankSync } from './components/BankSync';
-import type { Property, Transaction, Tenant, Unit, Reminder, Document, PaymentSettings, BankConnection, SyncedTransaction } from './types';
+import type { Property, Transaction, Tenant, Unit, Reminder, Document, PaymentSettings, BankConnection, SyncedTransaction, RecurringTransaction } from './types';
 import { supabase } from './services/supabaseClient';
+import * as plaidClient from './services/plaidClient';
+import * as saltEdgeClient from './services/saltEdgeClient';
 import type { User } from '@supabase/supabase-js';
 
 
@@ -45,6 +47,7 @@ const App: React.FC = () => {
   const [units, setUnits] = useState<Unit[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
 
   // State for Payment Gateway feature
   const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({ stripe_connected: false });
@@ -95,6 +98,14 @@ const App: React.FC = () => {
 
         if (transactionsError) console.error('Error fetching transactions:', transactionsError.message);
         else setTransactions(transactionsData || []);
+        
+        const { data: recurringData, error: recurringError } = await supabase
+            .from('recurring_transactions')
+            .select('*')
+            .order('description', { ascending: true });
+
+        if (recurringError) console.error('Error fetching recurring transactions:', recurringError.message);
+        else setRecurringTransactions(recurringData || []);
 
         const { data: tenantsData, error: tenantsError } = await supabase
           .from('tenants')
@@ -349,6 +360,50 @@ const App: React.FC = () => {
     }
   };
 
+  const addRecurringTransaction = async (transaction: Omit<RecurringTransaction, 'id'>) => {
+    const { data, error } = await supabase
+      .from('recurring_transactions')
+      .insert({ ...transaction, user_id: user?.id })
+      .select()
+      .single();
+
+    if (error) {
+        console.error('Error adding recurring transaction:', error.message);
+        throw error;
+    } else if (data) {
+        setRecurringTransactions(prev => [...prev, data].sort((a, b) => a.description.localeCompare(b.description)));
+    }
+  };
+
+  const updateRecurringTransaction = async (id: string, updatedData: Partial<Omit<RecurringTransaction, 'id'>>) => {
+      const { data, error } = await supabase
+        .from('recurring_transactions')
+        .update(updatedData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+          console.error('Error updating recurring transaction:', error.message);
+          throw error;
+      } else if (data) {
+          setRecurringTransactions(prev => 
+              prev.map(t => t.id === id ? data : t)
+                  .sort((a, b) => a.description.localeCompare(b.description))
+          );
+      }
+  };
+
+  const deleteRecurringTransaction = async (id: string) => {
+      const { error } = await supabase.from('recurring_transactions').delete().eq('id', id);
+      if (error) {
+          console.error('Error deleting recurring transaction:', error.message);
+          throw error;
+      } else {
+          setRecurringTransactions(prev => prev.filter(t => t.id !== id));
+      }
+  };
+
   const upsertReminder = async (reminderData: Partial<Reminder> & { tenant_id: string }) => {
     const { data, error } = await supabase
         .from('reminders')
@@ -495,31 +550,28 @@ const App: React.FC = () => {
       }));
   };
 
-  const handleConnectBank = () => {
-    const newConnection: BankConnection = {
-        id: `conn_${Date.now()}`,
-        bank_name: 'First National Bank (Demo)',
-        account_name: 'Business Checking',
-        last_four: Math.floor(1000 + Math.random() * 9000).toString(),
-    };
-    setBankConnections(prev => [...prev, newConnection]);
+  const handleAddBankConnection = (connection: BankConnection) => {
+    setBankConnections(prev => [...prev, connection]);
   };
 
-  const handleSyncTransactions = (connectionId: string) => {
-      console.log(`Syncing transactions for ${connectionId}`);
-      const mockTransactions: SyncedTransaction[] = [
-          { id: `sync_${Date.now()}_1`, date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0], description: 'HOME DEPOT #1234', amount: 125.43, is_debit: true },
-          { id: `sync_${Date.now()}_2`, date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0], description: 'ZELLE PAYMENT FROM JANE DOE', amount: 1800, is_debit: false },
-          { id: `sync_${Date.now()}_3`, date: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], description: 'PG&E UTILITIES', amount: 88.12, is_debit: true },
-          { id: `sync_${Date.now()}_4`, date: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0], description: 'STARBUCKS', amount: 5.75, is_debit: true },
-          { id: `sync_${Date.now()}_5`, date: new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0], description: 'STRIPE TRANSFER', amount: 3550, is_debit: false },
-      ];
+  const handleSyncTransactions = async (connection: BankConnection) => {
+    try {
+        let newTxs: SyncedTransaction[] = [];
+        if (connection.provider === 'plaid' && connection.access_token) {
+            newTxs = await plaidClient.fetchTransactions(connection.access_token);
+        } else if (connection.provider === 'saltedge' && connection.connection_id) {
+            newTxs = await saltEdgeClient.fetchTransactions(connection.connection_id);
+        }
 
-      setSyncedTransactions(prev => {
-          const existingDescriptions = new Set(prev.map(t => t.description));
-          const newTxs = mockTransactions.filter(t => !existingDescriptions.has(t.description));
-          return [...prev, ...newTxs].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      });
+        setSyncedTransactions(prev => {
+            const existingDescriptions = new Set(prev.map(t => t.description));
+            const uniqueNewTxs = newTxs.filter(t => !existingDescriptions.has(t.description));
+            return [...prev, ...uniqueNewTxs].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+    } catch (error) {
+        console.error(`Error syncing transactions for ${connection.id}:`, error);
+        alert(`Failed to sync transactions for ${connection.institution_name}. Please try again.`);
+    }
   };
 
   const handleImportSyncedTransactions = (transactionsToImport: (Omit<Transaction, 'id'> & { sync_id: string })[]) => {
@@ -530,7 +582,7 @@ const App: React.FC = () => {
       
       Promise.all(importPromises).then(() => {
         const importedIds = new Set(transactionsToImport.map(t => t.sync_id));
-        setSyncedTransactions(prev => prev.filter(t => !importedIds.has(t.id)));
+        setSyncedTransactions(prev => prev.filter(t => !importedIds.has(t.sync_id)));
       });
   };
 
@@ -541,7 +593,18 @@ const App: React.FC = () => {
       case 'properties':
         return <Properties properties={properties} units={units} addProperty={addProperty} deleteProperty={deleteProperty} onSelectProperty={handleSelectProperty} />;
       case 'transactions':
-        return <TransactionsView transactions={transactions} addTransaction={addTransaction} deleteTransaction={deleteTransaction} updateTransaction={updateTransaction} properties={properties} units={units} />;
+        return <TransactionsView 
+            transactions={transactions} 
+            addTransaction={addTransaction} 
+            deleteTransaction={deleteTransaction} 
+            updateTransaction={updateTransaction} 
+            properties={properties} 
+            units={units} 
+            recurringTransactions={recurringTransactions}
+            addRecurringTransaction={addRecurringTransaction}
+            updateRecurringTransaction={updateRecurringTransaction}
+            deleteRecurringTransaction={deleteRecurringTransaction}
+        />;
       case 'tenants':
         return <Tenants tenants={tenants} properties={properties} units={units} transactions={transactions} onSelectTenant={handleSelectTenant} addTenant={addTenant} />;
       case 'reminders':
@@ -563,7 +626,7 @@ const App: React.FC = () => {
             units={units}
             bankConnections={bankConnections}
             syncedTransactions={syncedTransactions}
-            onConnectBank={handleConnectBank}
+            onAddConnection={handleAddBankConnection}
             onSyncTransactions={handleSyncTransactions}
             onImportTransactions={handleImportSyncedTransactions}
         />;
@@ -636,9 +699,6 @@ const App: React.FC = () => {
             onUploadDocument={uploadDocument}
             onDeleteDocument={deleteDocument}
             onDownloadDocument={downloadDocument}
-            isStripeConnected={paymentSettings.stripe_connected}
-            onlinePayEnabled={!!tenantOnlinePay[tenant.id]}
-            onToggleOnlinePay={handleToggleTenantOnlinePay}
         />;
       }
       default:
