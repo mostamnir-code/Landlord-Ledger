@@ -55,6 +55,12 @@ const BuildingLibraryIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
     </svg>
 );
 
+const DocumentTextIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+    </svg>
+);
+
 
 interface SidebarProps {
   activeView: string;
@@ -72,7 +78,7 @@ const NavItem: React.FC<{
     className={`flex items-center space-x-3 w-full px-4 py-3 rounded-lg text-left transition-colors ${
       isActive
         ? 'bg-primary-500 text-white shadow'
-        : 'text-slate-600 hover:bg-primary-100 hover:text-primary-700'
+        : 'text-slate-600 dark:text-slate-400 hover:bg-primary-100 dark:hover:bg-slate-700 hover:text-primary-700 dark:hover:text-primary-400'
     }`}
   >
     {icon}
@@ -82,7 +88,7 @@ const NavItem: React.FC<{
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
   return (
-    <aside className="w-64 bg-white p-4 border-r border-slate-200 hidden md:flex md:flex-col">
+    <aside className="w-64 bg-white dark:bg-slate-800 p-4 border-r border-slate-200 dark:border-slate-700 hidden md:flex md:flex-col transition-colors duration-200 print:hidden">
       <nav className="space-y-2 flex-grow">
         <NavItem
           icon={<ChartPieIcon className="w-6 h-6" />}
@@ -119,6 +125,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) =
           label="Bank Sync"
           isActive={activeView === 'bankSync'}
           onClick={() => setActiveView('bankSync')}
+        />
+        <NavItem
+            icon={<DocumentTextIcon className="w-6 h-6" />}
+            label="Reports"
+            isActive={activeView === 'reports'}
+            onClick={() => setActiveView('reports')}
         />
         <NavItem
           icon={<BellIcon className="w-6 h-6" />}

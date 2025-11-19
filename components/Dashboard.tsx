@@ -3,13 +3,13 @@ import type { Property, Transaction } from '../types';
 import { TransactionType } from '../types';
 
 const Card: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
-  <div className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
-    <div className="bg-primary-100 text-primary-600 p-3 rounded-full">
+  <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex items-center space-x-4 border border-slate-200 dark:border-slate-700 transition-colors duration-200">
+    <div className="bg-primary-100 dark:bg-slate-700 text-primary-600 dark:text-primary-400 p-3 rounded-full">
       {icon}
     </div>
     <div>
-      <p className="text-sm text-slate-500 font-medium">{title}</p>
-      <p className="text-2xl font-bold text-slate-800">{value}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
+      <p className="text-2xl font-bold text-slate-800 dark:text-white">{value}</p>
     </div>
   </div>
 );
@@ -41,9 +41,10 @@ const ChartBarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 interface DashboardProps {
   properties: Property[];
   transactions: Transaction[];
+  darkMode?: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions, darkMode }) => {
   const Recharts = (window as any).Recharts;
   const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Brush, AreaChart, Area } = Recharts || {};
 
@@ -132,6 +133,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
   }, [transactions, summary.netProfit]);
 
   const COLORS = ['#0ea5e9', '#f43f5e', '#f97316', '#10b981', '#8b5cf6', '#ec4899'];
+  const axisColor = darkMode ? '#94a3b8' : '#64748b';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -144,11 +146,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
       const net = income - expenses;
   
       return (
-        <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-          <p className="font-bold text-slate-800">{label}</p>
-          <p className="text-sm text-green-600">Income: {formatCurrency(income)}</p>
-          <p className="text-sm text-red-600">Expenses: {formatCurrency(expenses)}</p>
-          <p className={`text-sm font-semibold ${net >= 0 ? 'text-primary-600' : 'text-red-500'}`}>
+        <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
+          <p className="font-bold text-slate-800 dark:text-white">{label}</p>
+          <p className="text-sm text-green-600 dark:text-green-400">Income: {formatCurrency(income)}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">Expenses: {formatCurrency(expenses)}</p>
+          <p className={`text-sm font-semibold ${net >= 0 ? 'text-primary-600 dark:text-primary-400' : 'text-red-500 dark:text-red-400'}`}>
             Net: {formatCurrency(net)}
           </p>
         </div>
@@ -163,8 +165,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
           if (summary.totalExpenses > 0) {
             const percentage = ((data.value / summary.totalExpenses) * 100).toFixed(1);
             return (
-                <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-                    <p className="font-bold text-slate-800">{data.name}</p>
+                <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
+                    <p className="font-bold text-slate-800 dark:text-white">{data.name}</p>
                     <p className="text-sm" style={{ color: data.payload.fill }}>
                         Amount: {formatCurrency(data.value)} ({percentage}%)
                     </p>
@@ -172,8 +174,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
             );
           }
           return (
-            <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-                <p className="font-bold text-slate-800">{data.name}</p>
+            <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
+                <p className="font-bold text-slate-800 dark:text-white">{data.name}</p>
                 <p className="text-sm" style={{ color: data.payload.fill }}>
                     Amount: {formatCurrency(data.value)}
                 </p>
@@ -186,9 +188,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
   const CustomAreaTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-          <p className="font-bold text-slate-800">{label}</p>
-          <p className="text-sm text-primary-600">
+        <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
+          <p className="font-bold text-slate-800 dark:text-white">{label}</p>
+          <p className="text-sm text-primary-600 dark:text-primary-400">
             Projected Balance: {formatCurrency(payload[0].value)}
           </p>
         </div>
@@ -199,7 +201,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+      <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card title="Total Income" value={formatCurrency(summary.totalIncome)} icon={<ArrowTrendingUpIcon className="w-6 h-6" />} />
@@ -208,31 +210,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-slate-800">Income vs. Expenses</h2>
+        <div className="lg:col-span-3 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
+            <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">Income vs. Expenses</h2>
             <div style={{ width: '100%', height: 400 }}>
             {Recharts && BarChart ? (
                 <ResponsiveContainer>
                 <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" stroke="#64748b" />
-                    <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke="#64748b" />
-                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#334155" : "#e2e8f0"} />
+                    <XAxis dataKey="name" stroke={axisColor} />
+                    <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke={axisColor} />
+                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)' }} />
                     <Legend />
                     <Bar dataKey="Income" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    <Brush dataKey="name" height={30} stroke="#3b82f6" fill="#eff6ff" />
+                    <Brush dataKey="name" height={30} stroke="#3b82f6" fill={darkMode ? "#1e293b" : "#eff6ff"} />
                 </BarChart>
                 </ResponsiveContainer>
             ) : (
                 <div className="flex items-center justify-center h-full">
-                <p className="text-slate-500">Chart library is loading or has failed to load.</p>
+                <p className="text-slate-500 dark:text-slate-400">Chart library is loading or has failed to load.</p>
                 </div>
             )}
             </div>
         </div>
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-slate-800">Expense Breakdown</h2>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
+            <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">Expense Breakdown</h2>
             <div style={{ width: '100%', height: 400 }}>
             {Recharts && PieChart ? (
                 expenseByCategory.length > 0 ? (
@@ -257,24 +259,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
                 </ResponsiveContainer>
                 ) : (
                     <div className="flex items-center justify-center h-full">
-                        <p className="text-slate-500">No expense data available.</p>
+                        <p className="text-slate-500 dark:text-slate-400">No expense data available.</p>
                     </div>
                 )
             ) : (
                 <div className="flex items-center justify-center h-full">
-                <p className="text-slate-500">Chart library is loading...</p>
+                <p className="text-slate-500 dark:text-slate-400">Chart library is loading...</p>
                 </div>
             )}
             </div>
         </div>
       </div>
       
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-4">
-            <div className="bg-primary-100 text-primary-600 p-2 rounded-full">
+            <div className="bg-primary-100 dark:bg-slate-700 text-primary-600 dark:text-primary-400 p-2 rounded-full">
                 <ChartBarIcon className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold text-slate-800">6-Month Projected Cash Flow</h2>
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white">6-Month Projected Cash Flow</h2>
         </div>
         <div style={{ width: '100%', height: 300 }}>
             {Recharts && AreaChart ? (
@@ -287,21 +289,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ properties, transactions }
                                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" stroke="#64748b" />
-                        <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke="#64748b" domain={['dataMin - 1000', 'dataMax + 1000']}/>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#334155" : "#e2e8f0"} />
+                        <XAxis dataKey="name" stroke={axisColor} />
+                        <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke={axisColor} domain={['dataMin - 1000', 'dataMax + 1000']}/>
                         <Tooltip content={<CustomAreaTooltip />} cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '3 3' }} />
                         <Area type="monotone" dataKey="Projected Cash Flow" stroke="#3b82f6" fillOpacity={1} fill="url(#colorProjection)" />
                     </AreaChart>
                 </ResponsiveContainer>
                  ) : (
                     <div className="flex items-center justify-center h-full">
-                        <p className="text-slate-500 text-center">Not enough transaction data to generate a projection. <br/> Please add more income/expense records.</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-center">Not enough transaction data to generate a projection. <br/> Please add more income/expense records.</p>
                     </div>
                 )
             ) : (
                 <div className="flex items-center justify-center h-full">
-                <p className="text-slate-500">Chart library is loading...</p>
+                <p className="text-slate-500 dark:text-slate-400">Chart library is loading...</p>
                 </div>
             )}
         </div>

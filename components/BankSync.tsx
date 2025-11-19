@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { BankConnection, SyncedTransaction, Property, Unit, Transaction } from '../types';
+import type { BankConnection, SyncedTransaction, Property, Unit, Transaction, Tenant } from '../types';
 import { TransactionType, DefaultIncomeCategories, DefaultExpenseCategories } from '../types';
 import { Modal } from './Modal';
 import * as plaidClient from '../services/plaidClient';
@@ -43,6 +43,7 @@ interface BankSyncProps {
     onAddConnection: (connection: BankConnection) => void;
     onSyncTransactions: (connection: BankConnection) => void;
     onImportTransactions: (transactions: (Omit<Transaction, 'id'> & { sync_id: string })[]) => void;
+    tenants: Tenant[];
 }
 
 const categorySuggestions = [
@@ -166,7 +167,7 @@ const TransactionReviewRow: React.FC<{
     );
 }
 
-export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConnections, syncedTransactions, onAddConnection, onSyncTransactions, onImportTransactions }) => {
+export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConnections, syncedTransactions, onAddConnection, onSyncTransactions, onImportTransactions, tenants }) => {
     const [isProviderSelectionOpen, setIsProviderSelectionOpen] = useState(false);
     const [isSyncing, setIsSyncing] = useState<string | null>(null);
     const [reviewedTxs, setReviewedTxs] = useState<Record<string, Partial<ReviewedTransaction>>>({});
@@ -371,3 +372,4 @@ export const BankSync: React.FC<BankSyncProps> = ({ properties, units, bankConne
         </div>
     );
 }
+    

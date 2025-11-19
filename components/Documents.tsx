@@ -46,7 +46,7 @@ const UploadDocumentForm: React.FC<{
     tenants: Tenant[];
 }> = ({ onUpload, onClose, properties, units, tenants }) => {
     const [file, setFile] = useState<File | null>(null);
-    const [documentType, setDocumentType] = useState(DocumentTypes[0]);
+    const [documentType, setDocumentType] = useState<string>(DocumentTypes[0]);
     const [associationType, setAssociationType] = useState<'property' | 'tenant' | 'general'>('general');
     const [propertyId, setPropertyId] = useState<string | null>(null);
     const [unitId, setUnitId] = useState<string | null>(null);

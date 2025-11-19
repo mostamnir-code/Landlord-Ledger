@@ -12,13 +12,13 @@ const ArrowLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const Card: React.FC<{ title: string; value: string; icon: React.ReactNode }> = ({ title, value, icon }) => (
-  <div className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
-    <div className="bg-primary-100 text-primary-600 p-3 rounded-full">
+  <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex items-center space-x-4 border border-slate-200 dark:border-slate-700">
+    <div className="bg-primary-100 dark:bg-slate-700 text-primary-600 dark:text-primary-400 p-3 rounded-full">
       {icon}
     </div>
     <div>
-      <p className="text-sm text-slate-500 font-medium">{title}</p>
-      <p className="text-2xl font-bold text-slate-800">{value}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
+      <p className="text-2xl font-bold text-slate-800 dark:text-white">{value}</p>
     </div>
   </div>
 );
@@ -72,21 +72,21 @@ const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) =
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="unitNumber" className="block text-sm font-medium text-slate-700">Unit Number / Name</label>
-          <input type="text" id="unitNumber" value={unitNumber} onChange={(e) => setUnitNumber(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g., Apt 101, Unit B" />
+          <label htmlFor="unitNumber" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Unit Number / Name</label>
+          <input type="text" id="unitNumber" value={unitNumber} onChange={(e) => setUnitNumber(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g., Apt 101, Unit B" />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-              <label htmlFor="rent" className="block text-sm font-medium text-slate-700">Monthly Rent ($)</label>
-              <input type="number" id="rent" value={rent} onChange={(e) => setRent(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              <label htmlFor="rent" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Monthly Rent ($)</label>
+              <input type="number" id="rent" value={rent} onChange={(e) => setRent(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
           </div>
           <div>
-              <label htmlFor="leaseEnd" className="block text-sm font-medium text-slate-700">Lease End Date</label>
-              <input type="date" id="leaseEnd" value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              <label htmlFor="leaseEnd" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Lease End Date</label>
+              <input type="date" id="leaseEnd" value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
           </div>
         </div>
         <div className="flex justify-end pt-4 space-x-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">Cancel</button>
           <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{initialData ? 'Save Changes' : 'Add Unit'}</button>
         </div>
       </form>
@@ -107,9 +107,10 @@ interface PropertyDetailProps {
   onUploadDocument: (file: File, metadata: Omit<Document, 'id' | 'created_at' | 'file_path' | 'file_name' | 'file_size' | 'file_type'>) => Promise<void>;
   onDeleteDocument: (document: Document) => Promise<void>;
   onDownloadDocument: (document: Document) => Promise<void>;
+  darkMode?: boolean;
 }
 
-export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, transactions, documents, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit, onUploadDocument, onDeleteDocument, onDownloadDocument }) => {
+export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, transactions, documents, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit, onUploadDocument, onDeleteDocument, onDownloadDocument, darkMode }) => {
     const Recharts = (window as any).Recharts;
     const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts || {};
     
@@ -187,6 +188,20 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
     };
 
+    const axisColor = darkMode ? '#94a3b8' : '#64748b';
+
+    const getLeaseStatus = (leaseEnd: string) => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const end = new Date(leaseEnd);
+        const diffTime = end.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) return { label: 'Expired', color: 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400' };
+        if (diffDays <= 60) return { label: 'Expiring Soon', color: 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400' };
+        return { label: 'Active', color: 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400' };
+    };
+
     const CustomBarTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
           const income = payload.find(p => p.dataKey === 'Income')?.value || 0;
@@ -194,11 +209,11 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
           const net = income - expenses;
       
           return (
-            <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-              <p className="font-bold text-slate-800">{label}</p>
-              <p className="text-sm text-green-600">Income: {formatCurrency(income)}</p>
-              <p className="text-sm text-red-600">Expenses: {formatCurrency(expenses)}</p>
-              <p className={`text-sm font-semibold ${net >= 0 ? 'text-primary-600' : 'text-red-500'}`}>
+            <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700">
+              <p className="font-bold text-slate-800 dark:text-white">{label}</p>
+              <p className="text-sm text-green-600 dark:text-green-400">Income: {formatCurrency(income)}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">Expenses: {formatCurrency(expenses)}</p>
+              <p className={`text-sm font-semibold ${net >= 0 ? 'text-primary-600 dark:text-primary-400' : 'text-red-500 dark:text-red-400'}`}>
                 Net: {formatCurrency(net)}
               </p>
             </div>
@@ -220,17 +235,17 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
     return (
         <div className="space-y-8">
             <div className="flex items-center space-x-4">
-                <button onClick={onBack} className="text-slate-500 hover:text-slate-900 p-2 rounded-full hover:bg-slate-200 transition-colors">
+                <button onClick={onBack} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                     <ArrowLeftIcon className="w-6 h-6" />
                 </button>
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">{property.address}</h1>
-                    <p className="text-slate-500">Property Overview & Units</p>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{property.address}</h1>
+                    <p className="text-slate-500 dark:text-slate-400">Property Overview & Units</p>
                 </div>
             </div>
 
             <div>
-                <h2 className="text-xl font-bold text-slate-800 mb-4">Financial Summary</h2>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Financial Summary</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card title="Total Income" value={formatCurrency(summary.totalIncome)} icon={<ArrowTrendingUpIcon className="w-6 h-6" />} />
                     <Card title="Total Expenses" value={formatCurrency(summary.totalExpenses)} icon={<ArrowTrendingDownIcon className="w-6 h-6" />} />
@@ -238,46 +253,57 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-slate-800">Units</h2>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">Units</h2>
                     <button onClick={() => setIsAddUnitModalOpen(true)} className="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-md hover:bg-primary-700">Add Unit</button>
                 </div>
                 {units.length > 0 ? (
                     <div className="space-y-3">
-                        {units.map(unit => (
-                            <div key={unit.id} className="bg-slate-50 p-4 rounded-md border border-slate-200 flex flex-wrap justify-between items-center gap-4">
-                                <div>
-                                    <p className="font-bold text-slate-800">{unit.unit_number}</p>
-                                    <p className="text-sm text-slate-500">Rent: {formatCurrency(unit.rent)}/mo | Lease Ends: {new Date(unit.lease_end).toLocaleDateString()}</p>
+                        {units.map(unit => {
+                            const leaseStatus = getLeaseStatus(unit.lease_end);
+                            return (
+                                <div key={unit.id} className="bg-slate-50 dark:bg-slate-700 p-4 rounded-md border border-slate-200 dark:border-slate-600 flex flex-wrap justify-between items-center gap-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-600/80">
+                                    <div className="flex-grow">
+                                        <div className="flex items-center gap-3 mb-1">
+                                            <p className="font-bold text-slate-800 dark:text-white text-lg">{unit.unit_number}</p>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${leaseStatus.color}`}>
+                                                {leaseStatus.label}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-slate-500 dark:text-slate-300">Rent: {formatCurrency(unit.rent)}/mo | Lease Ends: {new Date(unit.lease_end).toLocaleDateString()}</p>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <button onClick={() => setUnitToEdit(unit)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-2 rounded-full hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="Edit unit">
+                                            <PencilIcon className="w-5 h-5" />
+                                        </button>
+                                        <button onClick={() => setUnitToDelete(unit)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Delete unit">
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <button onClick={() => setUnitToEdit(unit)} className="text-primary-600 hover:text-primary-900 p-2" title="Edit unit">
-                                        <PencilIcon className="w-5 h-5" />
-                                    </button>
-                                    <button onClick={() => setUnitToDelete(unit)} className="text-red-600 hover:text-red-900 p-2" title="Delete unit">
-                                        <TrashIcon className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
-                    <p className="text-slate-500 text-center py-4">No units have been added to this property yet.</p>
+                    <div className="text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-lg">
+                        <p className="text-slate-500 dark:text-slate-400">No units have been added to this property yet.</p>
+                        <button onClick={() => setIsAddUnitModalOpen(true)} className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium">Add your first unit</button>
+                    </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                 <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold mb-4 text-slate-800">Financial Performance</h2>
+                 <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
+                    <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">Financial Performance</h2>
                     <div style={{ width: '100%', height: 300 }}>
                     {Recharts && BarChart && chartData.length > 0 ? (
                         <ResponsiveContainer>
                         <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" stroke="#64748b" />
-                            <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke="#64748b" />
-                            <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#334155" : "#e2e8f0"} />
+                            <XAxis dataKey="name" stroke={axisColor} />
+                            <YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} stroke={axisColor} />
+                            <Tooltip content={<CustomBarTooltip />} cursor={{ fill: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)' }} />
                             <Legend />
                             <Bar dataKey="Income" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                             <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -285,22 +311,22 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                         </ResponsiveContainer>
                     ) : (
                         <div className="flex items-center justify-center h-full">
-                        <p className="text-slate-500 text-center">No transaction data available to display chart.</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-center">No transaction data available to display chart.</p>
                         </div>
                     )}
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold mb-4 text-slate-800">Property Notes</h2>
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
+                    <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">Property Notes</h2>
                     <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Add any relevant notes for this property..."
-                        className="w-full h-32 p-3 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                        className="w-full h-32 p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm"
                         aria-label="Property Notes"
                     />
                     <div className="flex justify-end items-center mt-4">
-                        {isSavingNotes && <span className="text-sm text-green-600 mr-4 transition-opacity">Saved!</span>}
+                        {isSavingNotes && <span className="text-sm text-green-600 dark:text-green-400 mr-4 transition-opacity">Saved!</span>}
                         <button
                             onClick={handleSaveNotes}
                             className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-300 disabled:cursor-not-allowed"
@@ -312,54 +338,54 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-bold mb-4 text-slate-800">Recent Transactions</h2>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
+                <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">Recent Transactions</h2>
                 
                 <div className="flex flex-wrap gap-4 mb-4 items-end">
                     <div>
-                        <label htmlFor="start-date" className="block text-sm font-medium text-slate-700">Start Date</label>
+                        <label htmlFor="start-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
                         <input
                             type="date"
                             id="start-date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         />
                     </div>
                      <div>
-                        <label htmlFor="end-date" className="block text-sm font-medium text-slate-700">End Date</label>
+                        <label htmlFor="end-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
                         <input
                             type="date"
                             id="end-date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                             className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                             className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         />
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     {filteredTransactions.length > 0 ? (
-                        <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                        <thead className="bg-slate-50 dark:bg-slate-700">
                             <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
-                            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Date</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Description</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Category</th>
+                            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Amount</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                             {filteredTransactions.map(t => (
-                            <tr key={t.id} className="hover:bg-slate-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{t.description}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">
+                            <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{new Date(t.date).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 dark:text-slate-200 font-medium">{t.description}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-300">
                                     {t.category}
                                 </span>
                                 </td>
-                                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
+                                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {t.type === TransactionType.INCOME ? '+' : ''}{formatCurrency(t.amount)}
                                 </td>
                             </tr>
@@ -368,7 +394,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                         </table>
                     ) : (
                         <div className="text-center py-8">
-                            <p className="text-slate-500">No transactions found for the selected date range.</p>
+                            <p className="text-slate-500 dark:text-slate-400">No transactions found for the selected date range.</p>
                         </div>
                     )}
                 </div>

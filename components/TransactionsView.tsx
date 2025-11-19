@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Property, Transaction, Unit, RecurringTransaction } from '../types';
 import { TransactionType, DefaultIncomeCategories, DefaultExpenseCategories } from '../types';
@@ -45,8 +44,8 @@ const SortDescendingIcon = () => (
 const EmptyTransactionsIllustration: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
         <path d="M21 10.5H63V73.5L56 66.5L49 73.5L42 66.5L35 73.5L28 66.5L21 73.5V10.5Z" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary-400"/>
-        <path d="M35 31.5H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"/>
-        <path d="M35 45.5H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"/>
+        <path d="M35 31.5H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 dark:text-slate-600"/>
+        <path d="M35 45.5H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 dark:text-slate-600"/>
     </svg>
 );
 
@@ -161,25 +160,25 @@ const TransactionForm: React.FC<{
     <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label htmlFor="propertyId" className="block text-sm font-medium text-slate-700">Property</label>
+                <label htmlFor="propertyId" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Property</label>
                 <select 
                 id="propertyId" 
                 value={propertyId} 
                 onChange={(e) => setPropertyId(e.target.value)} 
                 required 
-                className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md ${errors.propertyId ? 'border-red-500' : 'border-slate-300'}`}
+                className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md ${errors.propertyId ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
                 >
                 {properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}
                 </select>
                 {errors.propertyId && <p className="mt-1 text-sm text-red-600">{errors.propertyId}</p>}
             </div>
             <div>
-                <label htmlFor="unitId" className="block text-sm font-medium text-slate-700">Unit (Optional)</label>
+                <label htmlFor="unitId" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Unit (Optional)</label>
                 <select 
                 id="unitId" 
                 value={unitId ?? ''}
                 onChange={(e) => setUnitId(e.target.value || null)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
                 disabled={availableUnits.length === 0}
                 >
                 <option value="">Property-wide</option>
@@ -188,58 +187,58 @@ const TransactionForm: React.FC<{
             </div>
        </div>
       <div>
-        <label htmlFor="type" className="block text-sm font-medium text-slate-700">Type</label>
-        <select id="type" value={type} onChange={(e) => setType(e.target.value as TransactionType)} required className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+        <label htmlFor="type" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
+        <select id="type" value={type} onChange={(e) => setType(e.target.value as TransactionType)} required className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
           <option value={TransactionType.INCOME}>Income</option>
           <option value={TransactionType.EXPENSE}>Expense</option>
         </select>
       </div>
       <div>
-        <label htmlFor="category" className="block text-sm font-medium text-slate-700">Category</label>
-        <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} required className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+        <label htmlFor="category" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
+        <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} required className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
             {currentCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
       </div>
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-slate-700">Description</label>
+        <label htmlFor="description" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
         <input 
           type="text" 
           id="description" 
           value={description} 
           onChange={(e) => setDescription(e.target.value)} 
           required 
-          className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${errors.description ? 'border-red-500' : 'border-slate-300'}`}
+          className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${errors.description ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
         />
         {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-slate-700">Amount</label>
+            <label htmlFor="amount" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Amount</label>
             <input 
             type="number" 
             id="amount" 
             value={amount} 
             onChange={(e) => setAmount(e.target.value)} 
             required 
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${errors.amount ? 'border-red-500' : 'border-slate-300'}`}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${errors.amount ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
             />
             {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
         </div>
         <div>
-            <label htmlFor="date" className="block text-sm font-medium text-slate-700">Date</label>
+            <label htmlFor="date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Date</label>
             <input 
             type="date" 
             id="date" 
             value={date} 
             onChange={(e) => setDate(e.target.value)} 
             required 
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${errors.date ? 'border-red-500' : 'border-slate-300'}`}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${errors.date ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}
             />
             {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
         </div>
       </div>
       <div className="flex justify-end pt-4 space-x-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
+        <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">Cancel</button>
         <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{initialTransaction ? 'Save Changes' : 'Add Transaction'}</button>
       </div>
     </form>
@@ -312,46 +311,46 @@ const RecurringTransactionForm: React.FC<{
         <form onSubmit={handleSubmit} className="space-y-4">
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Property</label>
-                    <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Property</label>
+                    <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                         {properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Unit (Optional)</label>
-                    <select value={unitId ?? ''} onChange={(e) => setUnitId(e.target.value || null)} disabled={!propertyId || availableUnits.length === 0} className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-slate-50">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Unit (Optional)</label>
+                    <select value={unitId ?? ''} onChange={(e) => setUnitId(e.target.value || null)} disabled={!propertyId || availableUnits.length === 0} className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm disabled:bg-slate-50 dark:disabled:bg-slate-800">
                         <option value="">Property-wide</option>
                         {availableUnits.map(u => <option key={u.id} value={u.id}>{u.unit_number}</option>)}
                     </select>
                 </div>
             </div>
             <div>
-                <label className="block text-sm font-medium text-slate-700">Description</label>
-                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
             </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Type</label>
-                    <select value={type} onChange={(e) => setType(e.target.value as TransactionType)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
+                    <select value={type} onChange={(e) => setType(e.target.value as TransactionType)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                         <option value={TransactionType.INCOME}>Income</option>
                         <option value={TransactionType.EXPENSE}>Expense</option>
                     </select>
                 </div>
                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Category</label>
+                    <select value={category} onChange={(e) => setCategory(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                         {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
             </div>
              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Amount</label>
-                    <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Amount</label>
+                    <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-700">Frequency</label>
-                    <select value={frequency} onChange={(e) => setFrequency(e.target.value as any)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Frequency</label>
+                    <select value={frequency} onChange={(e) => setFrequency(e.target.value as any)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
@@ -359,12 +358,12 @@ const RecurringTransactionForm: React.FC<{
                     </select>
                 </div>
                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Start Date</label>
-                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
                 </div>
             </div>
             <div className="flex justify-end pt-4 space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-md hover:bg-slate-300">Cancel</button>
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">{initialData ? 'Save Changes' : 'Add Rule'}</button>
             </div>
         </form>
@@ -531,18 +530,18 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
-        <h1 className="text-3xl font-bold text-slate-900">Transactions</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Transactions</h1>
         <div className="flex items-center space-x-2">
             <button
                 onClick={handleExportCSV}
-                className="flex items-center space-x-2 px-3 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
                 <ArrowDownTrayIcon className="w-5 h-5" />
                 <span>Export CSV</span>
             </button>
              <button
                 onClick={() => setIsRecurringModalOpen(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
                 <ClockCounterClockwiseIcon className="w-5 h-5" />
                 <span>Recurring</span>
@@ -561,25 +560,25 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
 
       {transactions.length > 0 ? (
         <>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-wrap items-end gap-4">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex flex-wrap items-end gap-4 transition-colors duration-200">
             <div className="flex-grow">
-              <label htmlFor="search" className="block text-sm font-medium text-slate-700">Search</label>
+              <label htmlFor="search" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Search</label>
               <input
                   id="search"
                   type="text"
                   placeholder="Description, category, address..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mt-1 w-full max-w-xs px-4 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="mt-1 w-full max-w-xs px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label htmlFor="type-filter" className="block text-sm font-medium text-slate-700">Type</label>
+              <label htmlFor="type-filter" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Type</label>
               <select
                 id="type-filter"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as any)}
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               >
                 <option value="ALL">All Types</option>
                 <option value={TransactionType.INCOME}>Income</option>
@@ -587,51 +586,51 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
               </select>
             </div>
             <div>
-              <label htmlFor="start-date" className="block text-sm font-medium text-slate-700">Start Date</label>
+              <label htmlFor="start-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
               <input
                 type="date"
                 id="start-date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               />
             </div>
             <div>
-              <label htmlFor="end-date" className="block text-sm font-medium text-slate-700">End Date</label>
+              <label htmlFor="end-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
               <input
                 type="date"
                 id="end-date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               />
             </div>
         </div>
-        <div className="overflow-x-auto bg-white rounded-lg shadow-md">
-            <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+        <div className="overflow-x-auto bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
+            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-700">
                 <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                         <button onClick={() => requestSort('date')} className="flex items-center">
                             Date {sortConfig.key === 'date' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon/> : <SortDescendingIcon/>)}
                         </button>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                         <button onClick={() => requestSort('property')} className="flex items-center">
                             Property / Unit {sortConfig.key === 'property' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon/> : <SortDescendingIcon/>)}
                         </button>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                         <button onClick={() => requestSort('description')} className="flex items-center">
                             Description {sortConfig.key === 'description' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon/> : <SortDescendingIcon/>)}
                         </button>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                         <button onClick={() => requestSort('category')} className="flex items-center">
                             Category {sortConfig.key === 'category' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon/> : <SortDescendingIcon/>)}
                         </button>
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">
                         <button onClick={() => requestSort('amount')} className="flex items-center justify-end w-full">
                             Amount {sortConfig.key === 'amount' && (sortConfig.direction === 'ascending' ? <SortAscendingIcon/> : <SortDescendingIcon/>)}
                         </button>
@@ -641,29 +640,29 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
                     </th>
                 </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                     {sortedTransactions.map(t => (
-                        <tr key={t.id} className="hover:bg-slate-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(t.date).toLocaleDateString()}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{new Date(t.date).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                                 {propertyMap.get(t.property_id) || 'N/A'}
-                                {t.unit_id && <span className="text-xs block text-slate-400">{unitMap.get(t.unit_id)}</span>}
+                                {t.unit_id && <span className="text-xs block text-slate-400 dark:text-slate-500">{unitMap.get(t.unit_id)}</span>}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-medium">{t.description}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 dark:text-slate-200 font-medium">{t.description}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-300">
                                     {t.category}
                                 </span>
                             </td>
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {formatCurrency(t.amount)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div className="flex items-center justify-end space-x-2">
-                                    <button onClick={() => setTransactionToEdit(t)} className="text-primary-600 hover:text-primary-900 p-1" title="Edit transaction">
+                                    <button onClick={() => setTransactionToEdit(t)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-1" title="Edit transaction">
                                         <PencilIcon className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => setTransactionToDelete(t)} className="text-red-600 hover:text-red-900 p-1" title="Delete transaction">
+                                    <button onClick={() => setTransactionToDelete(t)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1" title="Delete transaction">
                                         <TrashIcon className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -675,10 +674,10 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
         </div>
         </>
       ) : (
-        <div className="text-center py-16 bg-white rounded-lg shadow-md border-2 border-dashed border-slate-200">
+        <div className="text-center py-16 bg-white dark:bg-slate-800 rounded-lg shadow-md border-2 border-dashed border-slate-200 dark:border-slate-700">
           <EmptyTransactionsIllustration className="mx-auto h-28 w-28" />
-          <h3 className="mt-4 text-lg font-medium text-slate-800">No Transactions Found</h3>
-          <p className="mt-1 text-sm text-slate-500">{properties.length > 0 ? "Get started by adding your first transaction." : "You need to add a property before you can add transactions."}</p>
+          <h3 className="mt-4 text-lg font-medium text-slate-800 dark:text-white">No Transactions Found</h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{properties.length > 0 ? "Get started by adding your first transaction." : "You need to add a property before you can add transactions."}</p>
         </div>
       )}
 
@@ -735,32 +734,32 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ transactions
                 <div className="overflow-y-auto max-h-96">
                     {recurringTransactions.length > 0 ? (
                     <table className="min-w-full">
-                        <thead className="sticky top-0 bg-white">
+                        <thead className="sticky top-0 bg-white dark:bg-slate-800">
                             <tr>
-                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Description</th>
-                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Amount</th>
-                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Frequency</th>
-                                <th className="py-2 text-left text-sm font-semibold text-slate-600">Next Due</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Description</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Amount</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Frequency</th>
+                                <th className="py-2 text-left text-sm font-semibold text-slate-600 dark:text-slate-300">Next Due</th>
                                 <th className="py-2"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200">
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                             {recurringTransactions.map(rt => (
                                 <tr key={rt.id}>
-                                    <td className="py-3 pr-2 text-sm font-medium text-slate-800">{rt.description}</td>
-                                    <td className={`py-3 pr-2 text-sm ${rt.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(rt.amount)}</td>
-                                    <td className="py-3 pr-2 text-sm text-slate-500 capitalize">{rt.frequency}</td>
-                                    <td className="py-3 pr-2 text-sm text-slate-500">{calculateNextDueDate(rt)}</td>
+                                    <td className="py-3 pr-2 text-sm font-medium text-slate-800 dark:text-slate-200">{rt.description}</td>
+                                    <td className={`py-3 pr-2 text-sm ${rt.type === TransactionType.INCOME ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(rt.amount)}</td>
+                                    <td className="py-3 pr-2 text-sm text-slate-500 dark:text-slate-400 capitalize">{rt.frequency}</td>
+                                    <td className="py-3 pr-2 text-sm text-slate-500 dark:text-slate-400">{calculateNextDueDate(rt)}</td>
                                     <td className="py-3 text-right">
-                                        <button onClick={() => { setRecurringToEdit(rt); setRecurringFormOpen(true); }} className="p-1 text-primary-600 hover:text-primary-800"><PencilIcon className="w-4 h-4"/></button>
-                                        <button onClick={() => setRecurringToDelete(rt)} className="p-1 text-red-600 hover:text-red-800"><TrashIcon className="w-4 h-4"/></button>
+                                        <button onClick={() => { setRecurringToEdit(rt); setRecurringFormOpen(true); }} className="p-1 text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-200"><PencilIcon className="w-4 h-4"/></button>
+                                        <button onClick={() => setRecurringToDelete(rt)} className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"><TrashIcon className="w-4 h-4"/></button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                      ) : (
-                        <p className="text-center text-slate-500 py-8">No recurring transactions have been set up yet.</p>
+                        <p className="text-center text-slate-500 dark:text-slate-400 py-8">No recurring transactions have been set up yet.</p>
                      )}
                 </div>
                 <div className="flex justify-end pt-4">

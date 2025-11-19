@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -20,14 +19,14 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center" aria-modal="true" role="dialog">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg m-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-800">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg m-4 border border-slate-200 dark:border-slate-700 transition-colors duration-200" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-4 border-b border-slate-200 dark:border-slate-700">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">{title}</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
             <XMarkIcon className="w-6 h-6" />
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-6 dark:text-slate-300">
           {children}
         </div>
       </div>

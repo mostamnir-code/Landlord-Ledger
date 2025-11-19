@@ -15,6 +15,8 @@ import { Auth } from './components/Auth';
 import { OnlinePayments } from './components/OnlinePayments';
 import { Settings } from './components/Settings';
 import { BankSync } from './components/BankSync';
+import { OnboardingWizard } from './components/OnboardingWizard';
+import { Reports } from './components/Reports';
 import type { Property, Transaction, Tenant, Unit, Reminder, Document, PaymentSettings, BankConnection, SyncedTransaction, RecurringTransaction } from './types';
 import { supabase } from './services/supabaseClient';
 import * as plaidClient from './services/plaidClient';
@@ -25,7 +27,7 @@ import type { User } from '@supabase/supabase-js';
 const App: React.FC = () => {
   if (!supabase) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 p-4">
+      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
         <div className="p-8 text-center font-sans bg-red-50 text-red-800 border border-red-200 rounded-lg shadow-md max-w-lg mx-auto">
           <h1 className="text-2xl font-bold mb-4">Configuration Error</h1>
           <p>The application is missing the required Supabase credentials (URL and Key).</p>
@@ -40,6 +42,28 @@ const App: React.FC = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Dark Mode State
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => setDarkMode(!darkMode);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -75,6 +99,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (user) {
+        setDataLoading(true);
         const { data: propertiesData, error: propertiesError } = await supabase
           .from('properties')
           .select('*')
@@ -129,13 +154,26 @@ const App: React.FC = () => {
 
         if (documentsError) console.error('Error fetching documents:', documentsError.message);
         else setDocuments(documentsData || []);
+        
+        setDataLoading(false);
       }
     };
 
     fetchData();
   }, [user]);
 
-  const addProperty = async (property: Omit<Property, 'id' | 'notes'>) => {
+  // Trigger onboarding if no properties exist after loading
+  useEffect(() => {
+    if (!dataLoading && user && properties.length === 0) {
+        // Check if we've already dismissed it in this session or local storage
+        const hasDismissed = localStorage.getItem('onboarding_dismissed');
+        if (!hasDismissed) {
+            setShowOnboarding(true);
+        }
+    }
+  }, [dataLoading, user, properties.length]);
+
+  const addProperty = async (property: Omit<Property, 'id' | 'notes'>): Promise<Property | null> => {
     const { data, error } = await supabase
       .from('properties')
       .insert({ ...property, user_id: user?.id })
@@ -144,8 +182,29 @@ const App: React.FC = () => {
 
     if (error) {
       console.error('Error adding property:', error.message);
+      return null;
     } else if (data) {
       setProperties(prev => [...prev, data]);
+      return data;
+    }
+    return null;
+  };
+
+  const addPropertiesBulk = async (propertiesToAdd: Omit<Property, 'id' | 'notes'>[]): Promise<void> => {
+    if (!user) return;
+    
+    const propertiesWithUser = propertiesToAdd.map(p => ({ ...p, user_id: user.id }));
+    
+    const { data, error } = await supabase
+      .from('properties')
+      .insert(propertiesWithUser)
+      .select();
+
+    if (error) {
+      console.error('Error adding bulk properties:', error.message);
+      throw error;
+    } else if (data) {
+      setProperties(prev => [...prev, ...data].sort((a, b) => a.address.localeCompare(b.address)));
     }
   };
 
@@ -487,7 +546,6 @@ const App: React.FC = () => {
       setDocuments(prev => prev.filter(d => d.id !== document.id));
   };
 
-  // FIX: Renamed the 'document' parameter to 'docToDownload' to avoid conflict with the global 'document' object.
   const downloadDocument = async (docToDownload: Document) => {
       const { data, error } = await supabase.storage.from('documents').download(docToDownload.file_path);
       if (error) {
@@ -582,16 +640,23 @@ const App: React.FC = () => {
       
       Promise.all(importPromises).then(() => {
         const importedIds = new Set(transactionsToImport.map(t => t.sync_id));
-        setSyncedTransactions(prev => prev.filter(t => !importedIds.has(t.sync_id)));
+        setSyncedTransactions(prev => prev.filter(t => !importedIds.has(t.id)));
       });
   };
 
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard properties={properties} transactions={transactions} />;
+        return <Dashboard properties={properties} transactions={transactions} darkMode={darkMode} />;
       case 'properties':
-        return <Properties properties={properties} units={units} addProperty={addProperty} deleteProperty={deleteProperty} onSelectProperty={handleSelectProperty} />;
+        return <Properties 
+            properties={properties} 
+            units={units} 
+            addProperty={addProperty} 
+            addPropertiesBulk={addPropertiesBulk}
+            deleteProperty={deleteProperty} 
+            onSelectProperty={handleSelectProperty} 
+        />;
       case 'transactions':
         return <TransactionsView 
             transactions={transactions} 
@@ -629,7 +694,10 @@ const App: React.FC = () => {
             onAddConnection={handleAddBankConnection}
             onSyncTransactions={handleSyncTransactions}
             onImportTransactions={handleImportSyncedTransactions}
+            tenants={tenants}
         />;
+      case 'reports':
+        return <Reports properties={properties} transactions={transactions} units={units} />;
       case 'documents':
         return <Documents 
           documents={documents}
@@ -669,6 +737,7 @@ const App: React.FC = () => {
           onUploadDocument={uploadDocument}
           onDeleteDocument={deleteDocument}
           onDownloadDocument={downloadDocument}
+          darkMode={darkMode}
         />;
       }
       case 'tenantDetail': {
@@ -702,14 +771,14 @@ const App: React.FC = () => {
         />;
       }
       default:
-        return <Dashboard properties={properties} transactions={transactions} />;
+        return <Dashboard properties={properties} transactions={transactions} darkMode={darkMode} />;
     }
   };
   
   if (loading) {
     return (
-        <div className="flex h-screen items-center justify-center bg-slate-50">
-            <div className="text-xl text-slate-600">Loading...</div>
+        <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
+            <div className="text-xl text-slate-600 dark:text-slate-300">Loading...</div>
         </div>
     );
   }
@@ -719,7 +788,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-800">
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 print:h-auto print:overflow-visible print:block">
       <Sidebar 
         activeView={
           activeView === 'propertyDetail' ? 'properties' : 
@@ -727,13 +796,26 @@ const App: React.FC = () => {
         } 
         setActiveView={handleNavigate} 
       />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 flex flex-col overflow-hidden print:h-auto print:overflow-visible print:block">
+        <Header darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8 transition-colors duration-200 print:bg-white print:p-0 print:overflow-visible print:h-auto">
           {renderView()}
         </main>
       </div>
       <AIAssistant properties={properties} transactions={transactions} tenants={tenants} units={units} />
+      
+      {showOnboarding && (
+        <OnboardingWizard 
+            isOpen={showOnboarding} 
+            onComplete={() => {
+                setShowOnboarding(false);
+                localStorage.setItem('onboarding_dismissed', 'true');
+            }}
+            addProperty={addProperty}
+            addUnit={addUnit}
+            user={user}
+        />
+      )}
     </div>
   );
 };
