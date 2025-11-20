@@ -12,6 +12,7 @@ export const DocumentTypes = ['Lease Agreement', 'Receipt', 'Insurance Policy', 
 export interface Property {
   id: string;
   address: string;
+  type: 'SINGLE_FAMILY' | 'MULTI_UNIT';
   notes?: string;
 }
 
@@ -19,8 +20,8 @@ export interface Unit {
   id: string;
   property_id: string;
   unit_number: string;
-  rent: number;
-  lease_end: string;
+  rent?: number; // Optional
+  lease_end?: string; // Optional
 }
 
 export interface Transaction {

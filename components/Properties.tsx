@@ -34,6 +34,18 @@ const Bars4Icon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const HomeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+    </svg>
+);
+
+const BuildingOfficeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M12.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21" />
+  </svg>
+);
+
 const EmptyPropertiesIllustration: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
         <path d="M73.5 35L52.5 17.5V77H73.5V35Z" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary-400"/>
@@ -44,9 +56,14 @@ const EmptyPropertiesIllustration: React.FC<React.SVGProps<SVGSVGElement>> = (pr
 );
 
 const PropertyCard: React.FC<{ property: Property; unitCount: number; onDelete: () => void; onSelect: () => void; }> = ({ property, unitCount, onDelete, onSelect }) => (
-  <div onClick={onSelect} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all flex flex-col cursor-pointer">
+  <div onClick={onSelect} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all flex flex-col cursor-pointer relative group">
     <div className="flex justify-between items-start">
-        <h3 className="text-lg font-bold text-primary-700 dark:text-primary-400">{property.address}</h3>
+        <div className="flex items-center gap-3">
+            <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-primary-600 dark:text-primary-400">
+                {property.type === 'SINGLE_FAMILY' ? <HomeIcon className="w-6 h-6" /> : <BuildingOfficeIcon className="w-6 h-6" />}
+            </div>
+            <h3 className="text-lg font-bold text-primary-700 dark:text-primary-400">{property.address}</h3>
+        </div>
         <button
             onClick={(e) => {
                 e.stopPropagation();
@@ -59,13 +76,19 @@ const PropertyCard: React.FC<{ property: Property; unitCount: number; onDelete: 
         </button>
     </div>
     <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400 flex-grow">
-      <p><span className="font-semibold text-slate-800 dark:text-slate-200">{unitCount}</span> {unitCount === 1 ? 'Unit' : 'Units'}</p>
+      <div className="flex items-center justify-between">
+         <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-medium text-slate-600 dark:text-slate-300">
+             {property.type === 'SINGLE_FAMILY' ? 'Single Family' : 'Multi-Unit'}
+         </span>
+         <p><span className="font-semibold text-slate-800 dark:text-slate-200">{property.type === 'SINGLE_FAMILY' ? 1 : unitCount}</span> {unitCount === 1 ? 'Unit' : 'Units'}</p>
+      </div>
     </div>
   </div>
 );
 
 const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id' | 'notes'>) => void; onAddBulk: (properties: Omit<Property, 'id' | 'notes'>[]) => void; onClose: () => void; }> = ({ onAdd, onAddBulk, onClose }) => {
   const [address, setAddress] = useState('');
+  const [type, setType] = useState<'SINGLE_FAMILY' | 'MULTI_UNIT'>('MULTI_UNIT');
   const [bulkAddresses, setBulkAddresses] = useState('');
   const [isBulk, setIsBulk] = useState(false);
 
@@ -74,12 +97,12 @@ const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id' | 'notes
     if (isBulk) {
         const addresses = bulkAddresses.split('\n').map(a => a.trim()).filter(a => a.length > 0);
         if (addresses.length > 0) {
-            onAddBulk(addresses.map(addr => ({ address: addr })));
+            onAddBulk(addresses.map(addr => ({ address: addr, type: 'MULTI_UNIT' }))); // Default to multi-unit for bulk
             onClose();
         }
     } else {
         if (!address) return;
-        onAdd({ address });
+        onAdd({ address, type });
         onClose();
     }
   };
@@ -108,12 +131,32 @@ const AddPropertyForm: React.FC<{ onAdd: (property: Omit<Property, 'id' | 'notes
                 className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm placeholder-slate-400 dark:placeholder-slate-500" 
                 placeholder="123 Main St, Anytown, USA&#10;456 Elm St, Anytown, USA" 
             />
+            <p className="text-xs text-slate-500 mt-1">Bulk added properties default to Multi-Unit.</p>
           </div>
       ) : (
-          <div>
-            <label htmlFor="address" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Address</label>
-            <input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm placeholder-slate-400 dark:placeholder-slate-500" placeholder="e.g., 123 Main St, Anytown, USA" />
-          </div>
+          <>
+            <div>
+                <label htmlFor="address" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Address</label>
+                <input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="e.g., 123 Main St, Anytown, USA" />
+            </div>
+            <div>
+                <label htmlFor="type" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Property Type</label>
+                <select
+                    id="type"
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                >
+                    <option value="MULTI_UNIT">Multi-Unit Building</option>
+                    <option value="SINGLE_FAMILY">Single Family Home</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                    {type === 'SINGLE_FAMILY' 
+                        ? 'For Single Family homes, we will automatically create a "Main House" unit for you to assign tenants to.' 
+                        : 'For Multi-Unit buildings, you will need to add individual units manually.'}
+                </p>
+            </div>
+          </>
       )}
 
       <div className="flex justify-end pt-4 space-x-2">
@@ -178,7 +221,7 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, units, addPr
               if (idx !== -1) addressIndex = idx;
           }
 
-          const propertiesToAdd: { address: string }[] = [];
+          const propertiesToAdd: { address: string, type: 'MULTI_UNIT' }[] = [];
           const errors: string[] = [];
 
           dataRows.forEach(line => {
@@ -187,7 +230,7 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, units, addPr
               
               if (address) {
                   if (!properties.some(p => p.address.toLowerCase() === address.toLowerCase())) {
-                       propertiesToAdd.push({ address: address.replace(/^"|"$/g, '') });
+                       propertiesToAdd.push({ address: address.replace(/^"|"$/g, ''), type: 'MULTI_UNIT' });
                   } else {
                       errors.push(`Duplicate skipped: ${address}`);
                   }
@@ -286,6 +329,7 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, units, addPr
                     <thead className="bg-slate-50 dark:bg-slate-700">
                         <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Address</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Type</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Units</th>
                             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -299,6 +343,9 @@ export const Properties: React.FC<PropertiesProps> = ({ properties, units, addPr
                             >
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white">
                                     {prop.address}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                    {prop.type === 'SINGLE_FAMILY' ? 'Single Family' : 'Multi-Unit'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">

@@ -55,16 +55,16 @@ const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) => void; onClose: () => void; initialData?: Unit | null }> = ({ onSave, onClose, initialData }) => {
     const [unitNumber, setUnitNumber] = useState(initialData?.unit_number || '');
-    const [rent, setRent] = useState(initialData?.rent.toString() || '');
+    const [rent, setRent] = useState(initialData?.rent?.toString() || '');
     const [leaseEnd, setLeaseEnd] = useState(initialData?.lease_end || '');
   
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!unitNumber || !rent || !leaseEnd) return;
+      if (!unitNumber) return; // Rent and Lease End are optional now
       onSave({
         unit_number: unitNumber,
-        rent: parseFloat(rent),
-        lease_end: leaseEnd,
+        rent: rent ? parseFloat(rent) : undefined,
+        lease_end: leaseEnd || undefined,
       });
       onClose();
     };
@@ -78,11 +78,11 @@ const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) =
         <div className="grid grid-cols-2 gap-4">
           <div>
               <label htmlFor="rent" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Monthly Rent ($)</label>
-              <input type="number" id="rent" value={rent} onChange={(e) => setRent(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              <input type="number" id="rent" value={rent} onChange={(e) => setRent(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" placeholder="Optional" />
           </div>
           <div>
               <label htmlFor="leaseEnd" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Lease End Date</label>
-              <input type="date" id="leaseEnd" value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+              <input type="date" id="leaseEnd" value={leaseEnd} onChange={(e) => setLeaseEnd(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
           </div>
         </div>
         <div className="flex justify-end pt-4 space-x-2">
@@ -190,7 +190,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
 
     const axisColor = darkMode ? '#94a3b8' : '#64748b';
 
-    const getLeaseStatus = (leaseEnd: string) => {
+    const getLeaseStatus = (leaseEnd?: string) => {
+        if (!leaseEnd) return { label: 'No Lease', color: 'text-slate-500 bg-slate-100 dark:bg-slate-900/30 dark:text-slate-400' };
+        
         const today = new Date();
         today.setHours(0,0,0,0);
         const end = new Date(leaseEnd);
@@ -240,7 +242,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 </button>
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{property.address}</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Property Overview & Units</p>
+                    <p className="text-slate-500 dark:text-slate-400">{property.type === 'SINGLE_FAMILY' ? 'Single Family Home' : 'Property Overview & Units'}</p>
                 </div>
             </div>
 
@@ -271,7 +273,10 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                                                 {leaseStatus.label}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-slate-500 dark:text-slate-300">Rent: {formatCurrency(unit.rent)}/mo | Lease Ends: {new Date(unit.lease_end).toLocaleDateString()}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-300">
+                                            Rent: {unit.rent ? formatCurrency(unit.rent) + '/mo' : 'Not set'} | 
+                                            Lease Ends: {unit.lease_end ? new Date(unit.lease_end).toLocaleDateString() : 'Not set'}
+                                        </p>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <button onClick={() => setUnitToEdit(unit)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-2 rounded-full hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="Edit unit">
@@ -322,7 +327,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Add any relevant notes for this property..."
-                        className="w-full h-32 p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm"
+                        className="w-full h-64 p-3 border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm"
                         aria-label="Property Notes"
                     />
                     <div className="flex justify-end items-center mt-4">
@@ -338,74 +343,23 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md border border-slate-200 dark:border-slate-700">
-                <h2 className="text-xl font-bold mb-4 text-slate-800 dark:text-white">Recent Transactions</h2>
-                
-                <div className="flex flex-wrap gap-4 mb-4 items-end">
-                    <div>
-                        <label htmlFor="start-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
-                        <input
-                            type="date"
-                            id="start-date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                        />
-                    </div>
-                     <div>
-                        <label htmlFor="end-date" className="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
-                        <input
-                            type="date"
-                            id="end-date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                             className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                        />
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                    {filteredTransactions.length > 0 ? (
-                        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                        <thead className="bg-slate-50 dark:bg-slate-700">
-                            <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Date</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Description</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Category</th>
-                            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                            {filteredTransactions.map(t => (
-                            <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-700">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{new Date(t.date).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800 dark:text-slate-200 font-medium">{t.description}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-300">
-                                    {t.category}
-                                </span>
-                                </td>
-                                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${t.type === TransactionType.INCOME ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                {t.type === TransactionType.INCOME ? '+' : ''}{formatCurrency(t.amount)}
-                                </td>
-                            </tr>
-                            ))}
-                        </tbody>
-                        </table>
-                    ) : (
-                        <div className="text-center py-8">
-                            <p className="text-slate-500 dark:text-slate-400">No transactions found for the selected date range.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
             <Modal isOpen={isAddUnitModalOpen} onClose={() => setIsAddUnitModalOpen(false)} title="Add New Unit">
                 <AddUnitForm onSave={handleAddUnit} onClose={() => setIsAddUnitModalOpen(false)} />
             </Modal>
+
             <Modal isOpen={!!unitToEdit} onClose={() => setUnitToEdit(null)} title="Edit Unit">
-                <AddUnitForm onSave={handleUpdateUnit} onClose={() => setUnitToEdit(null)} initialData={unitToEdit} />
+                {unitToEdit && (
+                    <AddUnitForm 
+                        onSave={(updatedData) => {
+                            handleUpdateUnit(updatedData);
+                            setUnitToEdit(null);
+                        }} 
+                        onClose={() => setUnitToEdit(null)} 
+                        initialData={unitToEdit} 
+                    />
+                )}
             </Modal>
+            
             <ConfirmModal
                 isOpen={!!unitToDelete}
                 onClose={() => setUnitToDelete(null)}
@@ -417,8 +371,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 }}
                 title="Delete Unit?"
             >
-                Are you sure you want to delete unit "{unitToDelete?.unit_number}"? This will also unassign any tenants and delete associated transactions. This action cannot be undone.
+                Are you sure you want to delete unit "{unitToDelete?.unit_number}"? This will also delete any associated tenants and transactions. This action cannot be undone.
             </ConfirmModal>
+
         </div>
     );
 };

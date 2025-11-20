@@ -174,18 +174,39 @@ const App: React.FC = () => {
   }, [dataLoading, user, properties.length]);
 
   const addProperty = async (property: Omit<Property, 'id' | 'notes'>): Promise<Property | null> => {
-    const { data, error } = await supabase
+    // Insert the property
+    const { data: propData, error: propError } = await supabase
       .from('properties')
       .insert({ ...property, user_id: user?.id })
       .select()
       .single();
 
-    if (error) {
-      console.error('Error adding property:', error.message);
+    if (propError) {
+      console.error('Error adding property:', propError.message);
       return null;
-    } else if (data) {
-      setProperties(prev => [...prev, data]);
-      return data;
+    } else if (propData) {
+      setProperties(prev => [...prev, propData]);
+
+      // If Single Family, automatically create the default unit
+      if (property.type === 'SINGLE_FAMILY') {
+          const { data: unitData, error: unitError } = await supabase
+            .from('units')
+            .insert({ 
+                property_id: propData.id,
+                unit_number: 'Main House',
+                user_id: user?.id,
+                rent: null,
+                lease_end: null
+            })
+            .select()
+            .single();
+          
+          if (!unitError && unitData) {
+              setUnits(prev => [...prev, unitData]);
+          }
+      }
+
+      return propData;
     }
     return null;
   };
@@ -193,7 +214,12 @@ const App: React.FC = () => {
   const addPropertiesBulk = async (propertiesToAdd: Omit<Property, 'id' | 'notes'>[]): Promise<void> => {
     if (!user) return;
     
-    const propertiesWithUser = propertiesToAdd.map(p => ({ ...p, user_id: user.id }));
+    // Add user_id to all properties
+    const propertiesWithUser = propertiesToAdd.map(p => ({ 
+        ...p, 
+        user_id: user.id,
+        type: p.type || 'MULTI_UNIT' // Default to MULTI_UNIT if undefined, though type should be required
+    }));
     
     const { data, error } = await supabase
       .from('properties')
