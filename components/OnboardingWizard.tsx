@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { Property, Unit } from '../types';
 import type { User } from '@supabase/supabase-js';
@@ -19,6 +20,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
   // Step 1: Property State
   const [propertyAddress, setPropertyAddress] = useState('');
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(null);
+  const [propertyType, setPropertyType] = useState<'SINGLE_FAMILY' | 'MULTI_UNIT'>('MULTI_UNIT');
 
   // Step 2: Unit State
   const [unitNumber, setUnitNumber] = useState('');
@@ -32,10 +34,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
     if (!propertyAddress) return;
     setLoading(true);
     try {
-        const newProperty = await addProperty({ address: propertyAddress });
+        const newProperty = await addProperty({ address: propertyAddress, type: propertyType });
         if (newProperty) {
             setCreatedPropertyId(newProperty.id);
-            setCurrentStep(2);
+            if (propertyType === 'SINGLE_FAMILY') {
+                // Single Family properties auto-create a unit, so skip the unit creation step
+                setCurrentStep(3);
+            } else {
+                setCurrentStep(2);
+            }
         }
     } catch (error) {
         console.error("Error in onboarding property creation", error);
@@ -92,7 +99,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
                 <div className="text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="mx-auto w-20 h-20 bg-primary-100 dark:bg-primary-900/30 text-primary-600 rounded-full flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6.75h1.5m-1.5 3h1.5m-1.5 3h1.5M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M12.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M12.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21" />
                         </svg>
                     </div>
                     <div>
@@ -130,12 +137,33 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
                                 required
                             />
                         </div>
+                        
+                        <div>
+                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Property Type</label>
+                             <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setPropertyType('MULTI_UNIT')}
+                                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${propertyType === 'MULTI_UNIT' ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                                >
+                                    Multi-Unit / Rental
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPropertyType('SINGLE_FAMILY')}
+                                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${propertyType === 'SINGLE_FAMILY' ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
+                                >
+                                    Single Family
+                                </button>
+                             </div>
+                        </div>
+
                         <button 
                             type="submit"
                             disabled={!propertyAddress || loading}
                             className="w-full py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg font-semibold shadow-md transition-all"
                         >
-                            {loading ? 'Saving...' : 'Next: Add Units'}
+                            {loading ? 'Saving...' : (propertyType === 'SINGLE_FAMILY' ? 'Save and Finish' : 'Next: Add Units')}
                         </button>
                     </form>
                 </div>
@@ -209,7 +237,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
                     <div>
                         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">You're All Set!</h2>
                         <p className="text-slate-500 dark:text-slate-400 mt-2">
-                            Your property and unit have been added. You can now start tracking income, expenses, and tenants.
+                            Your property has been added. You can now start tracking income, expenses, and tenants.
                         </p>
                     </div>
                     <button 

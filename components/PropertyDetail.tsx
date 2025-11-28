@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import type { Property, Transaction, Unit, Document } from '../types';
+import type { Property, Transaction, Unit, Document, Tenant } from '../types';
 import { TransactionType } from '../types';
 import { Modal } from './Modal';
 import { ConfirmModal } from './ConfirmModal';
@@ -53,6 +53,18 @@ const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const UserPlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3.75 17.552C3.75 15.58 9.25 13.5 12 13.5c2.75 0 8.25 2.08 8.25 4.052v.948c0 .31-.252.562-.562.562H4.312c-.31 0-.562-.252-.562-.562v-.948z" />
+    </svg>
+);
+
+const UserMinusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3.75 17.552C3.75 15.58 9.25 13.5 12 13.5c2.75 0 8.25 2.08 8.25 4.052v.948c0 .31-.252.562-.562.562H4.312c-.31 0-.562-.252-.562-.562v-.948z" />
+    </svg>
+);
+
 const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) => void; onClose: () => void; initialData?: Unit | null }> = ({ onSave, onClose, initialData }) => {
     const [unitNumber, setUnitNumber] = useState(initialData?.unit_number || '');
     const [rent, setRent] = useState(initialData?.rent?.toString() || '');
@@ -60,7 +72,7 @@ const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) =
   
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!unitNumber) return; // Rent and Lease End are optional now
+      if (!unitNumber) return; 
       onSave({
         unit_number: unitNumber,
         rent: rent ? parseFloat(rent) : undefined,
@@ -93,9 +105,61 @@ const AddUnitForm: React.FC<{ onSave: (unit: Omit<Unit, 'id' | 'property_id'>) =
     );
 };
 
+const AssignTenantForm: React.FC<{ 
+    onSave: (tenantId: string) => void; 
+    onClose: () => void; 
+    tenants: Tenant[];
+    unitNumber: string;
+}> = ({ onSave, onClose, tenants, unitNumber }) => {
+    const [selectedTenantId, setSelectedTenantId] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (selectedTenantId) {
+            onSave(selectedTenantId);
+        }
+    };
+
+    const unassignedTenants = tenants.filter(t => !t.unit_id).sort((a, b) => a.name.localeCompare(b.name));
+    const assignedTenants = tenants.filter(t => t.unit_id).sort((a, b) => a.name.localeCompare(b.name));
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label htmlFor="tenantSelect" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Select Tenant for {unitNumber}</label>
+                <select 
+                    id="tenantSelect" 
+                    value={selectedTenantId} 
+                    onChange={(e) => setSelectedTenantId(e.target.value)} 
+                    className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    required
+                >
+                    <option value="">-- Select a Tenant --</option>
+                    <optgroup label="Unassigned Tenants">
+                        {unassignedTenants.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                        {unassignedTenants.length === 0 && <option disabled>No unassigned tenants</option>}
+                    </optgroup>
+                    <optgroup label="Assigned to Other Units (Move)">
+                        {assignedTenants.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                    </optgroup>
+                </select>
+            </div>
+            <div className="flex justify-end pt-4 space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-md hover:bg-slate-300 dark:hover:bg-slate-600">Cancel</button>
+                <button type="submit" disabled={!selectedTenantId} className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed">Assign Tenant</button>
+            </div>
+        </form>
+    );
+};
+
 interface PropertyDetailProps {
   property: Property;
   units: Unit[];
+  tenants: Tenant[];
   transactions: Transaction[];
   documents: Document[];
   onBack: () => void;
@@ -104,13 +168,14 @@ interface PropertyDetailProps {
   addUnit: (unit: Omit<Unit, 'id'>) => void;
   updateUnit: (unitId: string, updatedInfo: Partial<Omit<Unit, 'id' | 'property_id'>>) => void;
   deleteUnit: (unitId: string) => void;
+  onUpdateTenant: (tenantId: string, updatedInfo: Partial<Omit<Tenant, 'id' | 'notes'>>) => void;
   onUploadDocument: (file: File, metadata: Omit<Document, 'id' | 'created_at' | 'file_path' | 'file_name' | 'file_size' | 'file_type'>) => Promise<void>;
   onDeleteDocument: (document: Document) => Promise<void>;
   onDownloadDocument: (document: Document) => Promise<void>;
   darkMode?: boolean;
 }
 
-export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, transactions, documents, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit, onUploadDocument, onDeleteDocument, onDownloadDocument, darkMode }) => {
+export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units, tenants, transactions, documents, onBack, onUpdateNotes, onUpdateProperty, addUnit, updateUnit, deleteUnit, onUpdateTenant, onUploadDocument, onDeleteDocument, onDownloadDocument, darkMode }) => {
     const Recharts = (window as any).Recharts;
     const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts || {};
     
@@ -119,6 +184,12 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
     const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
     const [unitToEdit, setUnitToEdit] = useState<Unit | null>(null);
     const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+    
+    // Tenant Assignment State
+    const [isAssignTenantModalOpen, setIsAssignTenantModalOpen] = useState(false);
+    const [unitToAssignTenant, setUnitToAssignTenant] = useState<Unit | null>(null);
+    const [tenantToUnassign, setTenantToUnassign] = useState<{tenant: Tenant, unit: Unit} | null>(null);
+
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -141,6 +212,21 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
     const handleUpdateUnit = (unitData: Omit<Unit, 'id' | 'property_id'>) => {
         if (unitToEdit) {
             updateUnit(unitToEdit.id, unitData);
+        }
+    };
+
+    const handleAssignTenant = (tenantId: string) => {
+        if (unitToAssignTenant) {
+            onUpdateTenant(tenantId, { unit_id: unitToAssignTenant.id });
+            setIsAssignTenantModalOpen(false);
+            setUnitToAssignTenant(null);
+        }
+    };
+
+    const handleUnassignTenant = () => {
+        if (tenantToUnassign) {
+            onUpdateTenant(tenantToUnassign.tenant.id, { unit_id: null });
+            setTenantToUnassign(null);
         }
     };
     
@@ -224,16 +310,8 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
         return null;
     };
     
-    const filteredTransactions = useMemo(() => {
-        return [...transactions]
-            .filter(t => {
-                if (startDate && t.date < startDate) return false;
-                if (endDate && t.date > endDate) return false;
-                return true;
-            })
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [transactions, startDate, endDate]);
-    
+    const getTenantsForUnit = (unitId: string) => tenants.filter(t => t.unit_id === unitId);
+
     return (
         <div className="space-y-8">
             <div className="flex items-center space-x-4">
@@ -264,21 +342,51 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                     <div className="space-y-3">
                         {units.map(unit => {
                             const leaseStatus = getLeaseStatus(unit.lease_end);
+                            const unitTenants = getTenantsForUnit(unit.id);
                             return (
-                                <div key={unit.id} className="bg-slate-50 dark:bg-slate-700 p-4 rounded-md border border-slate-200 dark:border-slate-600 flex flex-wrap justify-between items-center gap-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-600/80">
-                                    <div className="flex-grow">
+                                <div key={unit.id} className="bg-slate-50 dark:bg-slate-700 p-4 rounded-md border border-slate-200 dark:border-slate-600 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-600/80">
+                                    <div className="flex-grow space-y-1">
                                         <div className="flex items-center gap-3 mb-1">
                                             <p className="font-bold text-slate-800 dark:text-white text-lg">{unit.unit_number}</p>
                                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${leaseStatus.color}`}>
                                                 {leaseStatus.label}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-slate-500 dark:text-slate-300">
-                                            Rent: {unit.rent ? formatCurrency(unit.rent) + '/mo' : 'Not set'} | 
-                                            Lease Ends: {unit.lease_end ? new Date(unit.lease_end).toLocaleDateString() : 'Not set'}
-                                        </p>
+                                        <div className="text-sm text-slate-500 dark:text-slate-300 flex flex-wrap gap-4">
+                                            <span>Rent: {unit.rent ? formatCurrency(unit.rent) + '/mo' : 'Not set'}</span>
+                                            <span>|</span>
+                                            <span>Lease Ends: {unit.lease_end ? new Date(unit.lease_end).toLocaleDateString() : 'Not set'}</span>
+                                        </div>
+                                        <div className="flex items-start gap-2 mt-2 text-sm">
+                                            <span className="font-medium text-slate-600 dark:text-slate-400">Tenants:</span>
+                                            {unitTenants.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {unitTenants.map(t => (
+                                                        <span key={t.id} className="inline-flex items-center gap-1 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-200">
+                                                            {t.name}
+                                                            <button 
+                                                                onClick={() => setTenantToUnassign({tenant: t, unit})}
+                                                                className="text-slate-400 hover:text-red-500 p-0.5 rounded-full"
+                                                                title="Unassign tenant"
+                                                            >
+                                                                <UserMinusIcon className="w-3 h-3" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-400 italic">Vacant</span>
+                                            )}
+                                            <button 
+                                                onClick={() => { setUnitToAssignTenant(unit); setIsAssignTenantModalOpen(true); }}
+                                                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 ml-2"
+                                                title="Assign Tenant"
+                                            >
+                                                <UserPlusIcon className="w-4 h-4 inline" />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-2 self-end md:self-center">
                                         <button onClick={() => setUnitToEdit(unit)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-200 p-2 rounded-full hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="Edit unit">
                                             <PencilIcon className="w-5 h-5" />
                                         </button>
@@ -360,6 +468,17 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 )}
             </Modal>
             
+            <Modal isOpen={isAssignTenantModalOpen} onClose={() => setIsAssignTenantModalOpen(false)} title={`Assign Tenant to ${unitToAssignTenant?.unit_number}`}>
+                {unitToAssignTenant && (
+                    <AssignTenantForm
+                        tenants={tenants}
+                        unitNumber={unitToAssignTenant.unit_number}
+                        onSave={handleAssignTenant}
+                        onClose={() => setIsAssignTenantModalOpen(false)}
+                    />
+                )}
+            </Modal>
+
             <ConfirmModal
                 isOpen={!!unitToDelete}
                 onClose={() => setUnitToDelete(null)}
@@ -372,6 +491,15 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, units,
                 title="Delete Unit?"
             >
                 Are you sure you want to delete unit "{unitToDelete?.unit_number}"? This will also delete any associated tenants and transactions. This action cannot be undone.
+            </ConfirmModal>
+
+            <ConfirmModal
+                isOpen={!!tenantToUnassign}
+                onClose={() => setTenantToUnassign(null)}
+                onConfirm={handleUnassignTenant}
+                title="Unassign Tenant?"
+            >
+                Are you sure you want to remove <strong>{tenantToUnassign?.tenant.name}</strong> from unit <strong>{tenantToUnassign?.unit.unit_number}</strong>? This tenant will be moved to 'Unassigned'.
             </ConfirmModal>
 
         </div>
