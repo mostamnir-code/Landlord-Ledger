@@ -1,12 +1,14 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { Property, Transaction, Tenant, Unit } from '../types';
 
-if (!process.env.API_KEY) {
-  console.warn("API_KEY environment variable not set. AI Assistant will not work.");
+const apiKey = import.meta.env.VITE_API_KEY;
+
+if (!apiKey) {
+  console.warn("VITE_API_KEY environment variable not set. AI Assistant will not work.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const genAI = new GoogleGenerativeAI(apiKey || "");
 
 export const getFinancialInsight = async (
   query: string, 
@@ -15,40 +17,28 @@ export const getFinancialInsight = async (
   tenants: Tenant[],
   units: Unit[],
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    return "API key is not configured. Please set the API_KEY environment variable.";
+  if (!apiKey) {
+    return "API key is not configured. Please set the VITE_API_KEY environment variable.";
   }
 
-  const model = 'gemini-2.5-flash';
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
   
   const dataContext = JSON.stringify({ properties, units, transactions, tenants }, null, 2);
 
-  const systemInstruction = `You are an expert financial analyst for a small landlord. Your role is to analyze the provided JSON data about properties, units, transactions, and tenants and answer the user's questions. Provide clear, concise, and helpful insights. All calculations should be based *only* on the data provided. Today's date is ${new Date().toISOString().split('T')[0]}.`;
-
   const prompt = `
-    Here is the landlord's data:
-    \`\`\`json
+    You are an expert financial assistant for a landlord. 
+    Analyze the following data and answer the user's query.
+    User Query: "${query}"
+    Data:
     ${dataContext}
-    \`\`\`
-
-    Here is the landlord's question:
-    "${query}"
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-      }
-    });
-    return response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    if (error instanceof Error) {
-        return `An error occurred while analyzing your data: ${error.message}`;
-    }
-    return "An unknown error occurred while analyzing your data.";
+    console.error("Error getting financial insight:", error);
+    return "An error occurred while analyzing the data. Please check the console for details.";
   }
 };
